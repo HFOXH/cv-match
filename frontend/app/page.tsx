@@ -81,10 +81,10 @@ export default function SimpleMatcher() {
           </div>
           <div className="flex items-center gap-6">
             <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium">
-              Documentación
+              Documentation
             </button>
             <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium">
-              Soporte
+              Support
             </button>
           </div>
         </div>
