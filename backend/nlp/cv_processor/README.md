@@ -493,6 +493,4 @@ nlp/cv_processor/test_cv_processor.py
 
 ---
 
-**Last Updated:** February 17, 2026  
-**Version:** 1.0  
-**Status:** Production Ready
+
