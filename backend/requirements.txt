@@ -4,3 +4,7 @@ streamlit
 sentence-transformers
 scikit-learn
 pdfplumber
+python-docx
+spacy
+chardet
+pytest
