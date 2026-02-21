@@ -8,3 +8,4 @@ python-docx
 spacy
 chardet
 pytest
+dateparser

@@ -2,8 +2,15 @@
 
 import os
 from typing import Dict, Optional, Any
-from .extractors import PDFExtractor, DOCXExtractor, TXTExtractor
-from ..cv_processor.parsers import ContactParser, SkillsParser, ExperienceParser
+
+from ..extractors.pdf_extractor import PDFExtractor
+from ..extractors.docx_extractor import DOCXExtractor
+from ..extractors.txt_extractor import TXTExtractor
+
+from ..parsers.contact_parser import ContactParser
+from ..parsers.skills_parser import SkillsParser
+from ..parsers.experience_parser import ExperienceParser
+
 from ..normalizers.normalizer import Normalizer
 
 

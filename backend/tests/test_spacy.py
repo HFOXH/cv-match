@@ -3,7 +3,7 @@
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
-from nlp.parsers.skills_parser import SkillsParser
+from ..nlp.parsers.skills_parser import SkillsParser
 
 
 def main():

@@ -18,11 +18,11 @@ from docx import Document
 # Add parent directories to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.nlp.processors.cv_processor import CVProcessor
+from nlp.processors.cv_processor import CVProcessor
 from nlp.extractors import PDFExtractor, DOCXExtractor, TXTExtractor
 from nlp.parsers import ContactParser, SkillsParser, ExperienceParser
 from nlp.normalizers.skills_database import SKILLS_DATABASE
-from backend.nlp.normalizers.normalizer import Normalizer
+from nlp.normalizers.normalizer import Normalizer
 
 
 # ──────────────────────────────────────────────

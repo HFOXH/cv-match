@@ -18,7 +18,7 @@ class ContactParser:
     def extract(text: str) -> Dict[str, Optional[str]]:
         return {
             "name": ContactParser._extract_name(text),
-            "emails": ContactParser._extract_emails(text),
+            "emails": ContactParser._extract_email(text),
             "phone": ContactParser._extract_phone(text)
         }
 

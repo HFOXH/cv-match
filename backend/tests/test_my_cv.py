@@ -1,7 +1,7 @@
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
-from backend.nlp.processors.cv_processor import CVProcessor
+from nlp.processors.cv_processor import CVProcessor
 
 # Test full CV processor pipeline with your resume
 result = CVProcessor.process_file(

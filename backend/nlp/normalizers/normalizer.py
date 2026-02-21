@@ -4,7 +4,7 @@
 import re
 import unicodedata
 from dateparser import parse as parse_date
-from skills_database import SKILLS_DATABASE
+from .skills_database import SKILLS_DATABASE
 
 class Normalizer:
     """Normalize and standardize text, skills, and dates."""
