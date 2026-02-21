@@ -5,7 +5,7 @@ import json
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-from cv_processor.cv_processor import CVProcessor
+from backend.nlp.processors.cv_processor import CVProcessor
 
 
 def main():

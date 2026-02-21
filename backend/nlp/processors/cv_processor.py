@@ -3,8 +3,8 @@
 import os
 from typing import Dict, Optional, Any
 from .extractors import PDFExtractor, DOCXExtractor, TXTExtractor
-from .parsers import ContactParser, SkillsParser, ExperienceParser
-from .normalizer import Normalizer
+from ..cv_processor.parsers import ContactParser, SkillsParser, ExperienceParser
+from ..normalizers.normalizer import Normalizer
 
 
 class CVProcessor:

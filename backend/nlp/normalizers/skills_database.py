@@ -1,11 +1,3 @@
-"""
-Skills database for CV parsing.
-
-Maps lowercase skill variants to their canonical display names.
-Organized by category for easy maintenance. To add a new skill,
-find the appropriate category and add the entry.
-"""
-
 PROGRAMMING_LANGUAGES = {
     'python': 'Python',
     'javascript': 'JavaScript',
@@ -269,9 +261,6 @@ METHODOLOGIES = {
     'algorithms': 'Algorithms',
 }
 
-
-# Combined database — all categories merged into one dict.
-# This is what SkillsParser uses at runtime.
 SKILLS_DATABASE = {
     **PROGRAMMING_LANGUAGES,
     **WEB_FRAMEWORKS,

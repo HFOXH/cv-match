@@ -4,7 +4,7 @@ import re
 import warnings
 from typing import List, Set, Optional
 
-from .skills_database import SKILLS_DATABASE
+from ..normalizers.skills_database import SKILLS_DATABASE
 
 try:
     import spacy

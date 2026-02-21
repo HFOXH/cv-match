@@ -1,10 +1,12 @@
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
-from cv_processor.cv_processor import CVProcessor
+from backend.nlp.processors.cv_processor import CVProcessor
 
 # Test full CV processor pipeline with your resume
-result = CVProcessor.process_file("santiago resume.pdf")
+result = CVProcessor.process_file(
+    r"C:\Users\santi\Documents\Personal\cv-match\backend\nlp\cv_santiago_cardenas_student_english.pdf"
+)
 
 print("=== CONTACT ===")
 for key, value in result["contact"].items():
