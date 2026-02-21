@@ -1,87 +1,25 @@
 """Work experience extraction from CV text."""
-
 import re
+import spacy
 from typing import List, Dict, Optional
+
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    print("Model not found, try: python -m spacy download en_core_web_sm")
+    nlp = None
 
 
 class ExperienceParser:
     """Parse work experience and education from CV text."""
 
-    DATE_PATTERNS = [
-        r'(\w+\s+\d{4})',  # Month YYYY
-        r'(\d{1,2}/\d{1,2}/\d{4})',  # MM/DD/YYYY
-        r'(\d{4}-\d{1,2}-\d{1,2})',  # YYYY-MM-DD
-        r'(\d{1,2}\.\d{1,2}\.\d{4})',  # DD.MM.YYYY
+    MONTHS = [
+        'january', 'february', 'march', 'april', 'may', 'june',
+        'july', 'august', 'september', 'october', 'november', 'december',
+        'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
     ]
 
-    MONTHS = ['january', 'february', 'march', 'april', 'may', 'june',
-              'july', 'august', 'september', 'october', 'november', 'december',
-              'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-
-    @staticmethod
-    def extract_experience(text: str) -> List[Dict]:
-        """
-        Extract work experience from text.
-        
-        Args:
-            text: Raw CV text
-            
-        Returns:
-            List of experience dictionaries
-        """
-        experiences = []
-        
-        # Look for experience section
-        experience_section = ExperienceParser._find_section(text, ['experience', 'work history', 'professional experience'])
-        
-        if experience_section:
-            # Split into individual jobs on lines that start with a date.
-            # The bare [A-Z] alternative was removed — it split on every capitalised
-            # line, fragmenting multi-line job descriptions.
-            month_alt = '|'.join(ExperienceParser.MONTHS)
-            jobs = re.split(
-                rf'\n(?=\d{{1,2}}[-/]|\b(?:{month_alt})\s+\d{{4}})',
-                experience_section,
-                flags=re.IGNORECASE,
-            )
-            
-            for job_text in jobs:
-                if job_text.strip():
-                    job = ExperienceParser._parse_job(job_text)
-                    if job:
-                        experiences.append(job)
-        
-        return experiences
-
-    @staticmethod
-    def extract_education(text: str) -> List[Dict]:
-        """
-        Extract education information from text.
-        
-        Args:
-            text: Raw CV text
-            
-        Returns:
-            List of education dictionaries
-        """
-        education = []
-        
-        # Look for education section
-        edu_section = ExperienceParser._find_section(text, ['education', 'academic', 'degree'])
-        
-        if edu_section:
-            # Split into individual degrees
-            degrees = re.split(r'\n\s*(?=[A-Z][a-z]+\s+(?:of|in)|\d{4})', edu_section)
-            
-            for degree_text in degrees:
-                if degree_text.strip():
-                    degree = ExperienceParser._parse_education(degree_text)
-                    if degree:
-                        education.append(degree)
-        
-        return education
-
-    # Common section headings for detecting section boundaries.
+    # Known section headings used to find section boundaries.
     SECTION_HEADINGS = [
         'experience', 'work experience', 'professional experience', 'work history',
         'education', 'academic', 'certifications', 'certificates',
@@ -92,60 +30,222 @@ class ExperienceParser:
         'volunteer', 'additional information',
     ]
 
+    # ------------------------------------------------------------------ #
+    #  PUBLIC METHODS                                                       #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def extract_experience(text: str) -> List[Dict]:
+        """Extract work experience entries from CV text."""
+        experiences = []
+        section = ExperienceParser._find_section(
+            text, ['experience', 'work history', 'professional experience']
+        )
+        if not section or not nlp:
+            return experiences
+
+        lines = [l.strip() for l in section.split('\n') if l.strip()]
+
+        blocks: List[List[str]] = []
+        current_block: List[str] = []
+
+        for line in lines:
+            is_bullet = line[:1] in ('●', '•', '-', '○', '‣', '➤', '➔')
+            has_year  = bool(re.search(r'\b(19|20)\d{2}\b', line))
+
+            if has_year and not is_bullet:
+                if current_block and not re.search(r'\b(19|20)\d{2}\b', current_block[-1]):
+                    title_line = current_block.pop()
+                    if current_block:
+                        blocks.append(current_block)
+                    current_block = [title_line, line]
+                else:
+                    if current_block:
+                        blocks.append(current_block)
+                    current_block = [line]
+            else:
+                current_block.append(line)
+
+        if current_block:
+            blocks.append(current_block)
+
+        for block in blocks:
+            job = ExperienceParser._parse_job_block(block)
+            if job:
+                experiences.append(job)
+
+        return experiences
+
+    @staticmethod
+    def extract_education(text: str) -> List[Dict]:
+        """Extract education entries from CV text."""
+        education = []
+        section = ExperienceParser._find_section(text, ['education', 'academic', 'degree'])
+        if not section or not nlp:
+            return education
+
+        lines = [l.strip() for l in section.split('\n') if l.strip()]
+
+        blocks: List[List[str]] = []
+        current_block: List[str] = []
+
+        DEGREE_KEYWORDS = [
+            'bachelor', 'master', 'doctor', 'phd', 'engineer', 'degree',
+            'licenciat', 'technolog', 'técnico', 'tecnólogo', 'ingeniería',
+            'sistemas', 'analysis', 'analyst', 'diploma', 'certificate',
+        ]
+
+        for line in lines:
+            lower = line.lower()
+            is_degree_line = any(kw in lower for kw in DEGREE_KEYWORDS)
+
+            if is_degree_line and current_block:
+                blocks.append(current_block)
+                current_block = [line]
+            else:
+                current_block.append(line)
+
+        if current_block:
+            blocks.append(current_block)
+
+        for block in blocks:
+            edu = ExperienceParser._parse_education_block(block)
+            if edu:
+                education.append(edu)
+
+        return education
+
+    # ------------------------------------------------------------------ #
+    #  PRIVATE HELPERS                                                     #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _parse_job_block(lines: List[str]) -> Optional[Dict]:
+        """
+        Turn a list of lines (one job block) into a job dict.
+
+        Expected rough structure:
+            line 0  → Job Title          (no year, no bullet)
+            line 1  → Company | Date     (has year)
+            line 2+ → bullet descriptions
+        """
+        if not lines:
+            return None
+
+        job: Dict = {
+            "title": None,
+            "company": None,
+            "start_date": None,
+            "end_date": None,
+            "description": [],
+        }
+
+        for line in lines:
+            is_bullet = line[:1] in ('●', '•', '-', '○', '‣', '➤', '➔')
+            has_year  = bool(re.search(r'\b(19|20)\d{2}\b', line))
+
+            if is_bullet:
+                cleaned = line.lstrip('●•-○‣➤➔ ').strip()
+                if cleaned:
+                    job["description"].append(cleaned)
+                continue
+
+            if has_year:
+                dates = ExperienceParser._extract_dates(line)
+                if dates:
+                    job["start_date"], job["end_date"] = dates
+
+                doc = nlp(line)
+                orgs = [ent.text for ent in doc.ents if ent.label_ == "ORG"]
+                if orgs:
+                    job["company"] = orgs[0]
+                elif '|' in line:
+                    job["company"] = line.split('|')[0].strip()
+                else:
+                    remainder = ExperienceParser._strip_dates(line)
+                    if remainder:
+                        job["company"] = remainder
+                continue
+
+            if not job["title"]:
+                job["title"] = line
+            elif not job["company"]:
+                job["company"] = line
+
+        return job if (job["title"] or job["company"]) else None
+
+    @staticmethod
+    def _parse_education_block(lines: List[str]) -> Optional[Dict]:
+        """Turn a list of lines (one education block) into an edu dict."""
+        if not lines or not nlp:
+            return None
+
+        edu: Dict = {"degree": None, "institution": None, "graduation_date": None}
+
+        for line in lines:
+            has_year = bool(re.search(r'\b(19|20)\d{2}\b', line))
+            line_doc = nlp(line)
+
+            if has_year:
+                dates = ExperienceParser._extract_dates(line)
+                if dates:
+                    edu["graduation_date"] = dates[1] or dates[0]
+                orgs = [ent.text for ent in line_doc.ents if ent.label_ == "ORG"]
+                if orgs and not edu["institution"]:
+                    edu["institution"] = orgs[0]
+                continue
+
+            orgs = [ent.text for ent in line_doc.ents if ent.label_ == "ORG"]
+            if orgs and not edu["institution"]:
+                edu["institution"] = line
+                continue
+
+            DEGREE_KEYWORDS = [
+                'bachelor', 'master', 'doctor', 'phd', 'engineer', 'degree',
+                'licenciat', 'technolog', 'técnico', 'tecnólogo', 'ingeniería',
+                'sistemas', 'analysis', 'analyst', 'diploma', 'certificate',
+            ]
+            if any(kw in line.lower() for kw in DEGREE_KEYWORDS) and not edu["degree"]:
+                edu["degree"] = line
+                continue
+
+            if not edu["degree"]:
+                edu["degree"] = line
+            elif not edu["institution"]:
+                edu["institution"] = line
+
+        return edu if (edu["degree"] or edu["institution"]) else None
+
     @staticmethod
     def _find_section(text: str, keywords: List[str]) -> Optional[str]:
-        """Find a section by keywords.
-
-        Looks for keywords as section headings (at the start of a line),
-        not as words within sentences.
-        """
+        """Find and return the text of a CV section by its heading keywords."""
         text_lower = text.lower()
-
-        # Build pattern that matches keywords at the start of a line
-        # to avoid matching "experience" inside "Experienced in..."
         section_pattern = '|'.join(re.escape(kw) for kw in keywords)
+
         match = re.search(
             rf'^\s*({section_pattern})\s*:?\s*$',
             text_lower,
             re.MULTILINE,
         )
-
-        # Fallback: match keyword preceded by a newline (for headings
-        # that share a line with other text like "WORK EXPERIENCE")
         if not match:
-            match = re.search(
-                rf'\b({section_pattern})\b\s*:?',
-                text_lower,
-            )
-
+            match = re.search(rf'\b({section_pattern})\b\s*:?', text_lower)
         if not match:
             return None
 
         start = match.end()
         remaining = text[start:]
 
-        # Find the next section heading after this section.
-        # Two separate searches to avoid IGNORECASE breaking ALL-CAPS detection.
-
-        # 1) Known headings (case-insensitive)
         heading_alt = '|'.join(
             re.escape(h) for h in ExperienceParser.SECTION_HEADINGS
-            if h not in keywords  # don't match the same section
+            if h not in keywords
         )
         heading_match = re.search(
             rf'\n\s*(?:{heading_alt})\s*:?',
             remaining,
             re.IGNORECASE,
         )
+        caps_match = re.search(r'\n\s*[A-Z][A-Z\s]{3,}$', remaining, re.MULTILINE)
 
-        # 2) ALL-CAPS lines like "EDUCATION" (case-sensitive, no IGNORECASE)
-        caps_match = re.search(
-            r'\n\s*[A-Z][A-Z\s]{3,}$',
-            remaining,
-            re.MULTILINE,
-        )
-
-        # Take whichever boundary comes first
         positions = []
         if heading_match:
             positions.append(heading_match.start())
@@ -156,150 +256,44 @@ class ExperienceParser:
         return text[start:end]
 
     @staticmethod
-    def _parse_job(text: str) -> Optional[Dict]:
-        """Parse individual job entry."""
-        lines = text.strip().split('\n')
-        if not lines:
+    def _extract_dates(text: str) -> Optional[tuple]:
+        """Extract start/end dates from a line of text using spaCy + regex fallback."""
+        if not nlp:
             return None
 
-        job = {
-            "title": None,
-            "company": None,
-            "start_date": None,
-            "end_date": None,
-            "description": []
-        }
+        doc = nlp(text)
+        dates = [ent.text for ent in doc.ents if ent.label_ == "DATE"]
 
-        for line in lines:
-            stripped = line.strip()
-            if not stripped:
-                continue
+        if not dates:
+            year_matches = re.findall(r'\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+)?\d{4}\b', text, re.IGNORECASE)
+            dates = [m.strip() for m in year_matches if m.strip()]
 
-            dates = ExperienceParser._extract_dates(stripped)
-            if dates:
-                job["start_date"], job["end_date"] = dates
+        if not dates:
+            return None
 
-                # Extract company name from remainder of date line.
-                # Format: "Oct 2023 - Present Symplifica"
-                remainder = ExperienceParser._strip_dates(stripped)
-                if remainder and not job["company"] and len(remainder) < 80:
-                    job["company"] = remainder
-                continue
+        start_date = dates[0] if dates else None
+        end_date   = dates[1] if len(dates) > 1 else None
 
-            if not job["title"] and len(stripped) < 80:
-                job["title"] = stripped
-            elif not job["company"] and len(stripped) < 80:
-                job["company"] = stripped
-            else:
-                # Strip bullet prefixes (•, ●, ○, ‣, ➤, -, –)
-                cleaned = stripped.lstrip('•●○‣➤➔-– ').strip()
-                if cleaned:
-                    job["description"].append(cleaned)
+        if not end_date:
+            present = re.search(r'\b(present|current|now|actualidad|actual)\b', text, re.IGNORECASE)
+            if present:
+                end_date = present.group(1).capitalize()
 
-        return job if (job["title"] or job["company"]) else None
+        return (start_date, end_date) if start_date else None
 
     @staticmethod
     def _strip_dates(text: str) -> Optional[str]:
-        """Remove date patterns and separators from a line, returning leftover text."""
-        month_alt = '|'.join(ExperienceParser.MONTHS)
-        # Remove month-year patterns
-        result = re.sub(rf'(?:{month_alt})\s+\d{{4}}', '', text, flags=re.IGNORECASE)
-        # Remove numeric date patterns
-        result = re.sub(r'\d{1,2}[/.-]\d{1,2}[/.-]\d{4}', '', result)
-        result = re.sub(r'\d{4}[-]\d{1,2}[-]\d{1,2}', '', result)
-        # Remove "Present" / "Current" / "Now"
-        result = re.sub(r'\b(?:present|current|now)\b', '', result, flags=re.IGNORECASE)
-        # Remove separators (dashes, en-dashes, em-dashes)
-        result = re.sub(r'\s*[-\u2013\u2014]+\s*', ' ', result)
-        # Clean up
-        result = result.strip(' ,;|')
-        return result if result else None
+        """Remove date entities and separators from a line, returning leftover text."""
+        if not nlp:
+            return text
 
-    @staticmethod
-    def _parse_education(text: str) -> Optional[Dict]:
-        """Parse individual education entry."""
-        lines = [l.strip() for l in text.strip().split('\n') if l.strip()]
-        if not lines:
-            return None
+        doc = nlp(text)
+        result = text
+        for ent in doc.ents:
+            if ent.label_ == "DATE":
+                result = result.replace(ent.text, "")
 
-        education = {
-            "degree": None,
-            "institution": None,
-            "graduation_date": None,
-            "gpa": None
-        }
-
-        DEGREE_KEYWORDS = [
-            'bachelor', 'master', 'phd', 'doctorate', 'diploma', 'certificate',
-            'postgraduate', 'undergraduate', 'associate', 'engineering',
-            'development', 'technology', 'science', 'arts', 'degree', 'systems',
-        ]
-
-        # Matches "2022 - 2023", "2025 – Present", "2020 — Current" (regular, en, em dash)
-        YEAR_RANGE_RE = re.compile(
-            r'\d{4}\s*[-\u2013\u2014]\s*(?:\d{4}|[Pp]resent|[Cc]urrent)'
-        )
-
-        for line in lines:
-            # Look for GPA
-            gpa_match = re.search(r'(?:gpa|cgpa)\s*:?\s*([\d.]+)', line.lower())
-            if gpa_match:
-                education["gpa"] = gpa_match.group(1)
-                continue
-
-            # Extract graduation date from year range first
-            if not education["graduation_date"]:
-                yr_match = YEAR_RANGE_RE.search(line)
-                if yr_match:
-                    education["graduation_date"] = yr_match.group(0)
-
-            # Fall back to standard date patterns
-            if not education["graduation_date"]:
-                dates = ExperienceParser._extract_dates(line)
-                if dates:
-                    education["graduation_date"] = dates[1] or dates[0]
-
-            # Strip year ranges from line before classifying degree / institution
-            clean_line = YEAR_RANGE_RE.sub('', line).strip(' \t\u2013\u2014-').strip()
-
-            if not clean_line:
-                continue
-
-            # Classify as degree, then institution (use elif to avoid double-assigning)
-            if not education["degree"] and any(kw in clean_line.lower() for kw in DEGREE_KEYWORDS):
-                education["degree"] = clean_line
-            elif not education["institution"] and clean_line != education.get("degree"):
-                education["institution"] = clean_line
-
-        return education if education["degree"] or education["institution"] else None
-
-    @staticmethod
-    def _extract_dates(text: str) -> Optional[tuple]:
-        """Extract start and end dates from text."""
-        # Build a month-anchored pattern from the MONTHS list to avoid false positives
-        # like "Engineer 2020" matching the generic \w+\s+\d{4} pattern.
-        month_alt = '|'.join(ExperienceParser.MONTHS)
-        patterns = [
-            rf'((?:{month_alt})\s+\d{{4}})',  # Month YYYY (validated against known months)
-            ExperienceParser.DATE_PATTERNS[1],  # MM/DD/YYYY
-            ExperienceParser.DATE_PATTERNS[2],  # YYYY-MM-DD
-            ExperienceParser.DATE_PATTERNS[3],  # DD.MM.YYYY
-        ]
-
-        start_date = None
-        end_date = None
-
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            if matches:
-                start_date = matches[0]
-                end_date = matches[1] if len(matches) > 1 else None
-                break
-
-        # Capture "Present" / "Current" / "Now" as an end date for ongoing roles
-        if start_date and not end_date:
-            present_match = re.search(r'\b(present|current|now)\b', text, re.IGNORECASE)
-            if present_match:
-                end_date = present_match.group(1).capitalize()
-
-        return (start_date, end_date) if start_date else None
+        result = re.sub(r'\b(present|current|now|actualidad)\b', '', result, flags=re.IGNORECASE)
+        result = re.sub(r'\s*[-\u2013\u2014|]+\s*', ' ', result)
+        result = re.sub(r'\b(19|20)\d{2}\b', '', result)
+        return result.strip(' ,;') or None

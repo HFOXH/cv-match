@@ -39,6 +39,24 @@ class SkillsParser:
         r'competencies?\s*:?',
     ]
 
+    @staticmethod
+    def _normalize_skill_item(raw: str) -> str:
+        """
+        Normalize a raw item before searching for it in the SKILLS DATABASE.
+        """
+        item = raw.strip()
+
+        if re.fullmatch(r'[\w\s]*[Yy]ears?\)', item) or re.fullmatch(r'\d+\)', item):
+            return ""
+
+        category_match = re.match(r'^[^:]{1,30}:\s*(.+)$', item)
+        if category_match:
+            item = category_match.group(1).strip()
+
+        item = re.sub(r'\s*\(\s*[\w\s]*\s*\)?\s*$', '', item).strip()
+
+        return item
+
     @classmethod
     def _ensure_initialized(cls) -> None:
         """Lazy-load spaCy model and build PhraseMatcher patterns."""
@@ -182,22 +200,33 @@ class SkillsParser:
         return ""
 
     @staticmethod
+    @staticmethod
     def _extract_from_section(section: str) -> List[str]:
         """Extract skills from a skills section."""
         skills = []
-        # Split by common delimiters including various bullet characters
-        # U+2022 (•), U+25CF (●), U+25CB (○), U+2023 (‣), U+27A4 (➤)
+        seen: Set[str] = set()
+
         items = re.split(r'[,;•●○‣➤➔|\n]', section)
 
-        for item in items:
-            # Strip whitespace and any remaining bullet/dash prefixes
-            item = item.strip().lstrip('-– ')
-            if item and len(item) < 50:
-                canonical = SkillsParser.SKILLS_DATABASE.get(
-                    item.lower(),
-                    item.title() if len(item) > 1 else None,
-                )
-                if canonical:
-                    skills.append(canonical)
+        for raw_item in items:
+            raw_item = raw_item.strip().lstrip('-–* ')
+            if not raw_item or len(raw_item) > 80:
+                continue
+
+            normalized = SkillsParser._normalize_skill_item(raw_item)
+            if not normalized or len(normalized) < 2:
+                continue
+
+            canonical = SkillsParser.SKILLS_DATABASE.get(normalized.lower())
+
+            if not canonical:
+                if re.fullmatch(r'[\d\W]+|suite|total|year|years|month|months', normalized, re.IGNORECASE):
+                    continue
+                canonical = normalized
+
+            key = canonical.lower()
+            if key not in seen:
+                seen.add(key)
+                skills.append(canonical)
 
         return skills

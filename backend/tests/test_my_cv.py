@@ -5,7 +5,7 @@ from nlp.processors.cv_processor import CVProcessor
 
 # Test full CV processor pipeline with your resume
 result = CVProcessor.process_file(
-    r"C:\Users\santi\Documents\Personal\cv-match\backend\nlp\cv_santiago_cardenas_student_english.pdf"
+    r"C:\Users\santi\Documents\Personal\cv-match\backend\tests\documents\Santiago Cardenas Vargas Resume.pdf"
 )
 
 print("=== CONTACT ===")
