@@ -21,10 +21,6 @@ class PDFExtractor:
         try:
             text = []
             with pdfplumber.open(file_path) as pdf:
-                # Handle password-protected files
-                if pdf.is_encrypted:
-                    return None
-                    
                 # Extract text from all pages
                 for page in pdf.pages:
                     page_text = page.extract_text()

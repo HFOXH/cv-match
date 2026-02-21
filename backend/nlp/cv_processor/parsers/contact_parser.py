@@ -8,7 +8,11 @@ class ContactParser:
     """Parse contact information from CV text."""
 
     EMAIL_PATTERN = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    PHONE_PATTERN = r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\+\d{1,15}'
+    PHONE_PATTERN = (
+        r'\(?\+?\d{1,3}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{0,4}'  # international: (+57) 3132904901
+        r'|\(\d{3}\)[-.\s]?\d{3}[-.\s]?\d{4}'                           # US: (555) 123-4567
+        r'|\+\d{1,3}[-.\s]\d[\d\s.-]{6,14}'                             # +44 20 7946 0958
+    )
 
     @staticmethod
     def extract(text: str) -> Dict[str, Optional[str]]:

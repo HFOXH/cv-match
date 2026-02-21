@@ -1,16 +1,17 @@
 # CV Processor Module
 
-A robust Python module for extracting text and structured information from various resume formats (PDF, DOCX, TXT).
+A robust Python module for extracting text and structured information from various resume formats (PDF, DOCX, TXT). Uses **spaCy PhraseMatcher** for NLP-powered skill extraction.
 
 ## Features
 
 - **Multi-format Support**: Extract text from PDF, DOCX, and TXT files
+- **NLP-Powered Skill Extraction**: spaCy PhraseMatcher with 227+ skill patterns across 12 categories
+- **Two-Stage Skill Detection**: Document-wide PhraseMatcher scan + section-based extraction
 - **Structured Data Extraction**: Automatically parse contact info, skills, work experience, and education
 - **Text Normalization**: Clean and standardize extracted text
 - **Error Handling**: Graceful handling of corrupted or unsupported files
-- **Skill Standardization**: Convert abbreviations and standardize skill names
+- **International Phone Support**: Handles US, international, and various phone formats
 - **Batch Processing**: Process multiple CV files from a directory
-- **Contact Parsing**: Extract name, email, and phone using regex patterns
 - **Date Standardization**: Handle various date formats
 
 ## Installation
@@ -23,10 +24,22 @@ pip install -r requirements.txt
 ```
 
 **Key Dependencies:**
+- `spacy` - NLP tokenization and PhraseMatcher
 - `pdfplumber` - PDF text extraction
 - `python-docx` - DOCX file parsing
 - `chardet` - Encoding detection for TXT files
 - `pytest` - Testing framework (optional, for running tests)
+
+### spaCy Model Setup
+
+The skills parser requires the `en_core_web_sm` model:
+
+```bash
+pip install spacy
+python -m spacy download en_core_web_sm
+```
+
+> **Note:** If spaCy or the model is not installed, the parser automatically falls back to regex-based matching. spaCy is recommended for better accuracy.
 
 ## File Structure
 
@@ -35,7 +48,7 @@ cv_processor/
 ├── __init__.py                 # Package initialization
 ├── cv_processor.py             # Main CVProcessor class
 ├── normalizer.py               # Text normalization utilities
-├── test_cv_processor.py        # Comprehensive pytest test suite
+├── test_cv_processor.py        # Comprehensive pytest test suite (42 tests)
 ├── extractors/
 │   ├── __init__.py
 │   ├── pdf_extractor.py       # PDF text extraction
@@ -44,18 +57,62 @@ cv_processor/
 └── parsers/
     ├── __init__.py
     ├── contact_parser.py      # Extract name, email, phone
-    ├── skills_parser.py       # Extract and standardize skills
+    ├── skills_parser.py       # spaCy PhraseMatcher skill extraction
+    ├── skills_database.py     # 227+ skills organized by category
     └── experience_parser.py   # Extract work experience and education
 ```
 
+**Utility scripts** (in `backend/nlp/`):
+- `run_cv_processor.py` - CLI tool to process any PDF and output JSON
+- `test_my_cv.py` - Test full pipeline on a resume
+- `test_spacy.py` - Verify spaCy is active and working
+
+## How Skill Extraction Works
+
+The `SkillsParser` uses a **two-stage pipeline**:
+
+### Stage 1: Document-Wide PhraseMatcher
+
+spaCy tokenizes the entire CV text into linguistic tokens, then the PhraseMatcher scans all tokens in a **single pass** against 227+ known skill patterns.
+
+```
+Text: "Experienced in Python, machine learning, and React Native"
+Tokens: [Experienced, in, Python, ,, machine, learning, ,, and, React, Native]
+Matches: Python, Machine Learning, React Native, React
+```
+
+**Why spaCy over regex?**
+- Keeps `C++`, `Node.js`, `.NET` as single tokens (regex would break on `.` and `+`)
+- Single pass over the document instead of 227+ separate regex searches
+- Handles multi-word skills like `"machine learning"` and `"spring boot"` naturally
+
+### Stage 2: Section-Based Extraction
+
+Finds the explicit "Skills" section in the resume and extracts items by splitting on commas, bullets, and newlines. This catches skills **not in the database** (e.g., domain-specific skills like "System Administration").
+
+### Graceful Fallback
+
+If spaCy is not installed, the parser falls back to regex-based matching automatically. Run `test_spacy.py` to check which mode is active.
+
 ## Usage
 
-### Basic Usage
+### CLI Tool
+
+Process any PDF from the command line:
+
+```bash
+cd backend/nlp
+python run_cv_processor.py "path/to/resume.pdf"
+```
+
+Outputs the full JSON result to stdout.
+
+### Python API
 
 #### Process a Single File
 
 ```python
-from nlp.cv_processor import CVProcessor
+from cv_processor.cv_processor import CVProcessor
 
 # Process a PDF file
 result = CVProcessor.process_file("path/to/resume.pdf")
@@ -70,7 +127,7 @@ result = CVProcessor.process_file("path/to/resume.txt")
 #### Process Raw Text
 
 ```python
-from nlp.cv_processor import CVProcessor
+from cv_processor.cv_processor import CVProcessor
 
 cv_text = """
 John Doe
@@ -98,7 +155,7 @@ result = CVProcessor.process_text(cv_text)
 #### Process Multiple Files
 
 ```python
-from nlp.cv_processor import CVProcessor
+from cv_processor.cv_processor import CVProcessor
 
 # Process all CV files in a directory
 results = CVProcessor.process_directory("/path/to/cv_folder")
@@ -126,7 +183,7 @@ All processing methods return a dictionary with the following structure:
         "email": "john.doe@example.com",
         "phone": "+1 (555) 123-4567"
     },
-    "skills": ["Python", "JavaScript", "React", "FastAPI"],
+    "skills": ["Python", "JavaScript", "React", "FastAPI", "Machine Learning"],
     "experience": [
         {
             "title": "Senior Developer",
@@ -147,6 +204,29 @@ All processing methods return a dictionary with the following structure:
 }
 ```
 
+## Skills Database
+
+The skills database (`parsers/skills_database.py`) contains **227+ skill patterns** organized into 12 categories:
+
+| Category | Examples | Count |
+|---|---|---|
+| Programming Languages | Python, JavaScript, C++, Go, Rust | 34 |
+| Web Frameworks | React, Angular, Django, FastAPI, Next.js | 45 |
+| Databases | PostgreSQL, MongoDB, Redis, DynamoDB | 20 |
+| Cloud & DevOps | AWS, Docker, Kubernetes, CI/CD | 25 |
+| Data Science & ML | TensorFlow, PyTorch, Pandas, NLP, LLM | 45 |
+| Tools & Version Control | Git, GitHub, Jira, Figma, Postman | 17 |
+| APIs & Protocols | REST API, GraphQL, gRPC, WebSocket, JWT | 12 |
+| Web Fundamentals | HTML, CSS, SASS, SEO | 7 |
+| Testing | Pytest, Jest, Selenium, Cypress | 6 |
+| Mobile | React Native, Flutter, Android, iOS | 6 |
+| Security | Ethical Hacking, OWASP, Kali Linux, Nmap | 11 |
+| Methodologies | Agile, Scrum, DevOps, Microservices, OOP | 9 |
+
+Each skill maps lowercase variants to a canonical display name (e.g., `'js' -> 'JavaScript'`, `'k8s' -> 'Kubernetes'`).
+
+To add a new skill, find the appropriate category in `skills_database.py` and add the entry.
+
 ## API Reference
 
 ### CVProcessor
@@ -157,303 +237,116 @@ Main class for processing CVs and extracting structured information.
 
 **`process_file(file_path: str) -> Dict[str, Any]`**
 - Process a single CV file (PDF, DOCX, or TXT)
-- **Parameters:**
-  - `file_path` (str): Path to the CV file
-- **Returns:** Dictionary with extracted information
-- **Raises:**
-  - `FileNotFoundError`: If file doesn't exist
-  - `ValueError`: If file format is unsupported or text extraction fails
+- **Raises:** `FileNotFoundError`, `ValueError`
 
 **`process_text(text: str) -> Dict[str, Any]`**
 - Process raw CV text
-- **Parameters:**
-  - `text` (str): Raw CV text
-- **Returns:** Dictionary with extracted information
-- **Raises:**
-  - `ValueError`: If text is empty or None
+- **Raises:** `ValueError` if text is empty or None
 
 **`process_directory(directory_path: str) -> Dict[str, Dict[str, Any]]`**
 - Process all CV files in a directory
-- **Parameters:**
-  - `directory_path` (str): Path to directory containing CV files
-- **Returns:** Dictionary mapping filenames to processed CV data
-- **Raises:**
-  - `ValueError`: If directory doesn't exist
+- **Raises:** `ValueError` if directory doesn't exist
 
 ### Text Extractors
 
-#### PDFExtractor
-
-```python
-from nlp.cv_processor.extractors import PDFExtractor
-
-text = PDFExtractor.extract("resume.pdf")
-# Returns: str or None if extraction fails
-```
-
-**Features:**
-- Multi-page document support
-- Password-protected file detection
-- Error handling for corrupted PDFs
-
-#### DOCXExtractor
-
-```python
-from nlp.cv_processor.extractors import DOCXExtractor
-
-text = DOCXExtractor.extract("resume.docx")
-# Returns: str or None if extraction fails
-```
-
-**Features:**
-- Paragraph extraction
-- Table content extraction
-- Structure preservation
-
-#### TXTExtractor
-
-```python
-from nlp.cv_processor.extractors import TXTExtractor
-
-text = TXTExtractor.extract("resume.txt")
-# Returns: str or None if extraction fails
-```
-
-**Features:**
-- Automatic encoding detection
-- Handles various text encodings (UTF-8, ASCII, etc.)
-- Error recovery
+| Extractor | Format | Features |
+|---|---|---|
+| `PDFExtractor` | PDF | Multi-page, password detection, error recovery |
+| `DOCXExtractor` | DOCX | Paragraphs, tables, structure preservation |
+| `TXTExtractor` | TXT | Auto encoding detection (UTF-8, ASCII, etc.) |
 
 ### Information Parsers
 
 #### ContactParser
-
 ```python
-from nlp.cv_processor.parsers import ContactParser
-
+from cv_processor.parsers import ContactParser
 contact = ContactParser.extract(cv_text)
 # Returns: {"name": str, "email": str, "phone": str}
 ```
 
-**Supported Formats:**
-- **Emails:** john@example.com, john.doe@company.co.uk
-- **Phones:** 
-  - +1-555-123-4567
-  - (555) 123-4567
-  - 555.123.4567
-  - +1 555 123 4567
+**Supported Phone Formats:**
+- US: `(555) 123-4567`, `555-123-4567`, `555.123.4567`
+- International: `(+57) 3132904901`, `+44 20 7946 0958`
+- General: `+1-555-123-4567`, `+1 555 123 4567`
 
 #### SkillsParser
-
 ```python
-from nlp.cv_processor.parsers import SkillsParser
-
+from cv_processor.parsers import SkillsParser
 skills = SkillsParser.extract(cv_text)
 # Returns: ["Python", "JavaScript", "React", ...]
 ```
 
 **Features:**
-- 34+ skill mappings
-- Abbreviation support (JS→JavaScript, ML→Machine Learning, etc.)
-- Duplicate removal
-- Skill standardization
-
-**Supported Skills Include:**
-- Languages: Python, Java, JavaScript, TypeScript, C++, C#, SQL
-- Frameworks: React, Angular, Vue, Django, FastAPI, Flask, Spring Boot
-- Databases: PostgreSQL, MySQL, MongoDB
-- Cloud: AWS, Google Cloud, Azure
-- ML/AI: Machine Learning, Deep Learning, TensorFlow, PyTorch, Scikit-learn
-- And 10+ more...
+- 227+ skill patterns with spaCy PhraseMatcher
+- Lazy-loaded singleton (model loads once on first call)
+- Regex fallback if spaCy is unavailable
+- Short/ambiguous token handling (`C`, `R` only matched in skills sections)
+- Section-aware extraction for skills not in the database
 
 #### ExperienceParser
-
 ```python
-from nlp.cv_processor.parsers import ExperienceParser
-
+from cv_processor.parsers import ExperienceParser
 experience = ExperienceParser.extract_experience(cv_text)
 education = ExperienceParser.extract_education(cv_text)
 ```
 
 **Features:**
-- Work experience extraction with dates
-- Job title and company parsing
-- Education degree and institution extraction
-- GPA extraction
-- Date format standardization
+- Section heading detection (line-start matching to avoid false positives)
+- Date extraction with `Present`/`Current`/`Now` support
+- Company name extraction from date lines (e.g., "Oct 2023 - Present Symplifica")
+- Education degree, institution, GPA, and year range parsing
 
 ### Normalizer
 
-Text normalization and standardization utilities.
-
 ```python
-from nlp.cv_processor.normalizer import Normalizer
+from cv_processor.normalizer import Normalizer
 
-# Basic text normalization
 normalized = Normalizer.normalize_text(text)
-
-# Clean text (remove special characters)
 cleaned = Normalizer.clean_text(text, preserve_structure=True)
-
-# Expand abbreviations
 expanded = Normalizer.expand_abbreviations(text)
-
-# Standardize skills
 standardized_skills = Normalizer.standardize_skills(skills_list)
-
-# Handle various date formats
 date = Normalizer.handle_date_formats("January 2020")
 ```
 
 ## Testing
 
-Run the comprehensive test suite:
+### Run Full Test Suite
 
 ```bash
-# From backend directory
-python -m pytest nlp/cv_processor/test_cv_processor.py -v
-
-# Or using Python module execution
-python -m nlp.cv_processor.test_cv_processor
+cd backend/nlp
+python -m pytest cv_processor/test_cv_processor.py -v
 ```
 
-**Test Coverage:**
-- 60+ test cases
+**Test Coverage (42 tests):**
 - PDF, DOCX, TXT extraction tests
 - Contact, skills, experience parsing tests
 - Text normalization tests
 - Error handling and edge cases
-- Full workflow integration tests
+- Full workflow integration test
 
-## Examples
+### Verify spaCy is Active
 
-### Example 1: Extract Information from a PDF Resume
-
-```python
-from nlp.cv_processor import CVProcessor
-import json
-
-result = CVProcessor.process_file("john_doe_resume.pdf")
-
-print("Contact Information:")
-print(f"  Name: {result['contact']['name']}")
-print(f"  Email: {result['contact']['email']}")
-print(f"  Phone: {result['contact']['phone']}")
-
-print("\nSkills:")
-for skill in result['skills']:
-    print(f"  - {skill}")
-
-print("\nWork Experience:")
-for exp in result['experience']:
-    print(f"  - {exp['title']} at {exp['company']}")
-    print(f"    {exp['start_date']} to {exp['end_date']}")
-
-print("\nEducation:")
-for edu in result['education']:
-    print(f"  - {edu['degree']}")
-    print(f"    {edu['institution']} ({edu['graduation_date']})")
+```bash
+cd backend/nlp
+python test_spacy.py
 ```
 
-### Example 2: Batch Processing CV Directory
+### Test with a Resume
 
-```python
-from nlp.cv_processor import CVProcessor
-
-# Process all CVs in a folder
-results = CVProcessor.process_directory("resumes/")
-
-# Summary statistics
-success_count = sum(1 for r in results.values() if "error" not in r)
-print(f"Successfully processed: {success_count}/{len(results)} files")
-
-# Collect all unique skills
-all_skills = set()
-for data in results.values():
-    if "error" not in data:
-        all_skills.update(data['skills'])
-
-print(f"\nAll skills found: {sorted(all_skills)}")
-```
-
-### Example 3: Process Text with Error Handling
-
-```python
-from nlp.cv_processor import CVProcessor
-
-cv_text = """
-Alice Johnson
-alice.johnson@tech.com
-
-SKILLS: Python, Machine Learning, FastAPI, Docker
-
-WORK EXPERIENCE
-ML Engineer at DataCo
-2021 - Present
-"""
-
-try:
-    result = CVProcessor.process_text(cv_text)
-    print(f"Extracted {len(result['skills'])} skills")
-    print(f"Contact: {result['contact']['name']}")
-except ValueError as e:
-    print(f"Error: {e}")
-```
-
-## Skill Abbreviations Supported
-
-| Abbreviation | Expansion |
-|---|---|
-| js | JavaScript |
-| ts | TypeScript |
-| ml | Machine Learning |
-| ai | Artificial Intelligence |
-| dl | Deep Learning |
-| nlp | NLP |
-| cpp | C++ |
-| c# | C# |
-| sql | SQL |
-
-*And 25+ more... See `SkillsParser.SKILLS_MAPPING` for complete list*
-
-## Error Handling
-
-The module gracefully handles errors:
-
-```python
-from nlp.cv_processor import CVProcessor
-
-# Handle file errors
-try:
-    result = CVProcessor.process_file("nonexistent.pdf")
-except FileNotFoundError:
-    print("File not found")
-
-# Handle format errors
-try:
-    result = CVProcessor.process_file("document.xlsx")
-except ValueError as e:
-    print(f"Unsupported format: {e}")
-
-# Handle empty text
-try:
-    result = CVProcessor.process_text("")
-except ValueError:
-    print("Empty text provided")
-
-# Batch processing with error tracking
-results = CVProcessor.process_directory("cvs/")
-for filename, data in results.items():
-    if "error" in data:
-        print(f"Failed to process {filename}: {data['error']}")
+```bash
+cd backend/nlp
+python test_my_cv.py
+# or
+python run_cv_processor.py "path/to/resume.pdf"
 ```
 
 ## Performance
 
+- **Skill Extraction**: Single-pass PhraseMatcher over 227+ patterns (faster than 227 regex searches)
+- **Lazy Loading**: spaCy model loads once on first call, not at import time
+- **Tokenizer Only**: NER, parser, and lemmatizer disabled for ~10x faster processing
 - **PDF Files**: Fast extraction, handles multi-page documents
-- **DOCX Files**: Efficient paragraph and table parsing
-- **TXT Files**: Automatic encoding detection
-- **Batch Processing**: Process 100+ CVs in seconds
+- **Batch Processing**: Process 100+ CVs efficiently
 
 ## Limitations
 
@@ -461,15 +354,16 @@ for filename, data in results.items():
 - **Scanned PDFs**: OCR not supported (requires image-based PDFs)
 - **Complex Layouts**: Best with standard CV formats
 - **Language Support**: Optimized for English resumes
+- **Skills Database**: Domain-specific skills outside the database are only caught from explicit skills sections
 
 ## Future Enhancements
 
 - [ ] OCR support for scanned PDFs
 - [ ] Multi-language support
-- [ ] Advanced entity recognition with spaCy NER
 - [ ] Portfolio/GitHub link extraction
 - [ ] Certifications parsing
 - [ ] Languages spoken extraction
+- [ ] Dynamic skills database updates
 
 ## Contributing
 
@@ -477,20 +371,20 @@ To add new features:
 
 1. Add new extractors in `extractors/`
 2. Add new parsers in `parsers/`
-3. Add comprehensive tests in `test_cv_processor.py`
-4. Update this README
+3. Add new skills to `parsers/skills_database.py`
+4. Add comprehensive tests in `test_cv_processor.py`
+5. Update this README
 
 ## License
 
 Part of the CV Matching Project - Cambrian College NLP Semester 2
 
-## Support
-
-For issues or questions, refer to the test file for usage examples:
-```bash
-nlp/cv_processor/test_cv_processor.py
-```
-
 ---
 
+<<<<<<< HEAD
 
+=======
+**Last Updated:** February 21, 2026
+**Version:** 2.0
+**Status:** Production Ready
+>>>>>>> 715f882 (Upgrade skill extraction to spaCy PhraseMatcher and fix parsers)
