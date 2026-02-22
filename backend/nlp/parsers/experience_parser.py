@@ -176,42 +176,39 @@ class ExperienceParser:
 
     @staticmethod
     def _parse_education_block(lines: List[str]) -> Optional[Dict]:
-        """Turn a list of lines (one education block) into an edu dict."""
-        if not lines or not nlp:
+        if not lines:
             return None
 
-        edu: Dict = {"degree": None, "institution": None, "graduation_date": None}
+        edu: Dict = {
+            "degree": None,
+            "institution": None,
+            "graduation_date": None
+        }
+
+        DEGREE_KEYWORDS = [
+            'bachelor', 'master', 'doctor', 'phd', 'engineer', 'degree',
+            'licenciat', 'technolog', 'técnico', 'tecnólogo', 'ingeniería',
+            'sistemas', 'analysis', 'analyst', 'diploma', 'certificate'
+        ]
 
         for line in lines:
-            has_year = bool(re.search(r'\b(19|20)\d{2}\b', line))
-            line_doc = nlp(line)
+            lower = line.lower()
 
-            if has_year:
+            # Detect year
+            if re.search(r'\b(19|20)\d{2}\b', line):
                 dates = ExperienceParser._extract_dates(line)
                 if dates:
                     edu["graduation_date"] = dates[1] or dates[0]
-                orgs = [ent.text for ent in line_doc.ents if ent.label_ == "ORG"]
-                if orgs and not edu["institution"]:
-                    edu["institution"] = orgs[0]
                 continue
 
-            orgs = [ent.text for ent in line_doc.ents if ent.label_ == "ORG"]
-            if orgs and not edu["institution"]:
-                edu["institution"] = line
+            # Detect degree
+            if any(kw in lower for kw in DEGREE_KEYWORDS):
+                if not edu["degree"]:
+                    edu["degree"] = line
                 continue
 
-            DEGREE_KEYWORDS = [
-                'bachelor', 'master', 'doctor', 'phd', 'engineer', 'degree',
-                'licenciat', 'technolog', 'técnico', 'tecnólogo', 'ingeniería',
-                'sistemas', 'analysis', 'analyst', 'diploma', 'certificate',
-            ]
-            if any(kw in line.lower() for kw in DEGREE_KEYWORDS) and not edu["degree"]:
-                edu["degree"] = line
-                continue
-
-            if not edu["degree"]:
-                edu["degree"] = line
-            elif not edu["institution"]:
+            # Otherwise assume institution
+            if not edu["institution"]:
                 edu["institution"] = line
 
         return edu if (edu["degree"] or edu["institution"]) else None

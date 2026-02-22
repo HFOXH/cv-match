@@ -63,37 +63,29 @@ class CVProcessor:
 
     @staticmethod
     def process_text(text: str) -> Dict[str, Any]:
-        """
-        Process raw CV text and extract structured information.
-        
-        Args:
-            text: Raw CV text
-            
-        Returns:
-            Dictionary with structured CV information
-        """
+
         if not text:
             raise ValueError("Empty text provided")
-        
-        # Extract from raw text first (preserves structure)
-        contact_info = ContactParser.extract(text)
-        skills = SkillsParser.extract(text)
-        experience = ExperienceParser.extract_experience(text)
-        education = ExperienceParser.extract_education(text)
-        
-        # Normalize text for storage
-        normalized_text = Normalizer.normalize_text(text)
-        
-        # Build result
+
+        preprocessed_text = CVPreprocessor.preprocess(text)
+
+        contact_info = ContactParser.extract(preprocessed_text)
+        skills = SkillsParser.extract(preprocessed_text)
+        experience = ExperienceParser.extract_experience(preprocessed_text)
+        education = ExperienceParser.extract_education(preprocessed_text)
+
+        normalized_text = Normalizer.normalize_text(preprocessed_text)
+
         result = {
             "raw_text": text,
+            "preprocessed_text": preprocessed_text,
             "normalized_text": normalized_text,
             "contact": contact_info,
             "skills": Normalizer.standardize_skills(skills) if skills else [],
             "experience": experience,
             "education": education,
         }
-        
+
         return result
 
     @staticmethod
