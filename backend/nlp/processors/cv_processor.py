@@ -13,6 +13,10 @@ from ..parsers.experience_parser import ExperienceParser
 
 from ..normalizers.normalizer import Normalizer
 
+from .cv_preprocessor import CVPreprocessor
+
+# TODO: Fix this class, it didn't work with last version, and it doesn't work with new version
+
 
 class CVProcessor:
     """Main class for processing CVs and extracting structured information."""
