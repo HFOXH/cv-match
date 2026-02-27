@@ -1,11 +1,8 @@
 fastapi
 uvicorn
-streamlit
-sentence-transformers
-scikit-learn
+openai
+python-dotenv
 pdfplumber
 python-docx
-spacy
 chardet
 pytest
-dateparser
