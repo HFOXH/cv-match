@@ -6,3 +6,4 @@ pdfplumber
 python-docx
 chardet
 pytest
+python-multipart

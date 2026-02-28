@@ -1,22 +1,21 @@
 import pdfplumber
-from typing import Optional
-
+from typing import Optional, Union
+from pathlib import Path
+import io
 
 class PDFExtractor:
     """Extract text from PDF files."""
 
-    # /*
-    # * function name: extract()
-    # * Description: Extract text from a PDF file page by page using pdfplumber.
-    # *              Joins all page texts with newlines.
-    # * Parameter: file_path : str : Path to the PDF file.
-    # * return: Optional[str] : Extracted text or None if extraction fails.
-    # */
     @staticmethod
-    def extract(file_path: str) -> Optional[str]:
+    def extract(file_input: Union[str, Path, io.BytesIO]) -> Optional[str]:
         try:
+            if isinstance(file_input, (str, Path)):
+                pdf_file = file_input
+            else:
+                pdf_file = file_input
+
             text = []
-            with pdfplumber.open(file_path) as pdf:
+            with pdfplumber.open(pdf_file) as pdf:
                 for page in pdf.pages:
                     page_text = page.extract_text()
                     if page_text:

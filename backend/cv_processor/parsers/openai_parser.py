@@ -1,22 +1,12 @@
-# /*
-# FILE : openai_parser.py
-# PROJECT : CVMatch - CV Processing Module (Task 1)
-# PROGRAMMER : Santiago Cardenas and Amel Sunil
-# FIRST VERSION : 2025-02-27
-# DESCRIPTION : OpenAI GPT-4o-mini integration for structured CV parsing.
-#               Sends raw CV text to the OpenAI API and returns structured
-#               data (contact, skills, experience, education, certifications).
-#               Falls back to raw text if the API is unavailable.
-# */
-
 import json
 import os
 import logging
 from typing import Dict, Any, Optional
-
 from openai import OpenAI
-
 from ..exceptions import ParsingError
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

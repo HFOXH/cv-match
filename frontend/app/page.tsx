@@ -18,23 +18,35 @@ export default function SimpleMatcher() {
     }
   };
 
-  const handleMatch = async () => {
-    if (!cvLoaded || !text) return;
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:8000/match", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cv_text: text, job_text: text }),
-      });
-      const result = await response.json();
-      setMatchScore(result.match_percentage);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+ const handleMatch = async () => {
+  if (!cvLoaded) return;
+  setLoading(true);
+
+  try {
+    const formData = new FormData();
+    formData.append("file", cvFile);
+
+    const response = await fetch("http://localhost:8000/api/v1/cv/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("Error:", err.detail || err);
+      return;
     }
-  };
+
+    const result = await response.json();
+    console.log(result);
+    // TODO: Set the real match in based of the result
+    setMatchScore(result.summary ? 100 : 0);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-white text-gray-900 selection:bg-blue-100">
