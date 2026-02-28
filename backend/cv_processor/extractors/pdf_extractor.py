@@ -1,12 +1,3 @@
-# /*
-# FILE : pdf_extractor.py
-# PROJECT : CVMatch - CV Processing Module (Task 1)
-# PROGRAMMER : Santiago Cardenas and Amel Sunil
-# FIRST VERSION : 2025-02-27
-# DESCRIPTION : Extracts raw text from PDF files using pdfplumber.
-#               Handles multi-page resumes and returns combined text.
-# */
-
 import pdfplumber
 from typing import Optional
 

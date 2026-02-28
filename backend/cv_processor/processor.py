@@ -1,14 +1,3 @@
-# /*
-# FILE : processor.py
-# PROJECT : CVMatch - CV Processing Module (Task 1)
-# PROGRAMMER : Santiago Cardenas and Amel Sunil
-# FIRST VERSION : 2025-02-27
-# DESCRIPTION : Main CV Processor module that orchestrates the full pipeline.
-#               Extracts raw text from CV files (PDF, DOCX, TXT) and sends
-#               it to OpenAI GPT-4o-mini for structured parsing. Includes
-#               fallback mode when the API is unavailable.
-# */
-
 import os
 from typing import Dict, Any
 
@@ -22,7 +11,7 @@ K_MIN_CV_TEXT_LENGTH = 50
 
 
 class CVProcessor:
-    """Orchestrates text extraction and OpenAI parsing."""
+    """Orchestrates text extraction and structured CV parsing."""
 
     K_SUPPORTED_FORMATS = {
         '.pdf': PDFExtractor,
@@ -31,17 +20,20 @@ class CVProcessor:
         '.txt': TXTExtractor,
     }
 
-    # /*
-    # * function name: process_file()
-    # * Description: Full CV processing pipeline. Validates the file, extracts
-    # *              raw text using the appropriate extractor, then parses it
-    # *              via OpenAI with fallback support.
-    # * Parameter: file_path : str : Path to the CV file (PDF, DOCX, or TXT).
-    # * return: dict : Dictionary with raw_text, parsed_data, parsing_method,
-    # *                and metadata.
-    # */
     @staticmethod
     def process_file(file_path: str) -> Dict[str, Any]:
+        """
+        Process a CV file: validate, extract text, parse structured data.
+
+        Args:
+            file_path: Path to the CV file (PDF, DOCX, TXT).
+
+        Returns:
+            Dict with raw_text, parsed_data, parsing_method, and metadata.
+
+        Raises:
+            FileNotFoundError, ValueError, ProcessingError
+        """
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -59,23 +51,25 @@ class CVProcessor:
 
         return CVProcessor.process_text(raw_text, file_type=file_ext.lstrip('.'))
 
-    # /*
-    # * function name: process_text()
-    # * Description: Parse raw CV text into structured data via OpenAI.
-    # *              Falls back to minimal parsing if the API is unavailable
-    # *              or returns an error.
-    # * Parameter: text : str : Raw CV text.
-    # *            file_type : str : Source file type (pdf, docx, txt, text).
-    # * return: dict : Dictionary with raw_text, parsed_data, parsing_method,
-    # *                and metadata including skill and experience counts.
-    # */
     @staticmethod
     def process_text(text: str, file_type: str = "text") -> Dict[str, Any]:
-        if not text or not text.strip():
+        """
+        Parse raw CV text into structured data.
+
+        Uses OpenAI parser if available; falls back to minimal parsing if needed.
+
+        Args:
+            text: Raw CV text.
+            file_type: Source file type (pdf, docx, txt, text).
+
+        Returns:
+            Dict with raw_text, parsed_data, parsing_method, and metadata.
+        """
+        if not text.strip():
             raise ProcessingError("Empty text provided")
 
         parser = get_parser()
-        if parser is not None:
+        if parser:
             try:
                 parsed_data = parser.parse_cv(text)
                 parsing_method = "openai"
@@ -98,21 +92,21 @@ class CVProcessor:
             },
         }
 
-    # /*
-    # * function name: process_directory()
-    # * Description: Process all supported CV files in a given directory.
-    # *              Returns a dictionary mapping each filename to its
-    # *              processed result or an error message.
-    # * Parameter: directory_path : str : Path to directory containing CV files.
-    # * return: dict : Dictionary mapping filenames to processed CV data.
-    # */
     @staticmethod
     def process_directory(directory_path: str) -> Dict[str, Dict[str, Any]]:
-        results = {}
+        """
+        Process all supported CV files in a directory.
 
+        Args:
+            directory_path: Path to directory containing CV files.
+
+        Returns:
+            Dict mapping filenames to processed CV data or error messages.
+        """
         if not os.path.isdir(directory_path):
             raise ValueError(f"Directory not found: {directory_path}")
 
+        results = {}
         for filename in os.listdir(directory_path):
             file_path = os.path.join(directory_path, filename)
 

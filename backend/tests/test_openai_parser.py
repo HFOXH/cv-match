@@ -1,14 +1,3 @@
-# /*
-# FILE : test_openai_parser.py
-# PROJECT : CVMatch - CV Processing Module (Task 1)
-# PROGRAMMER : Santiago Cardenas and Amel Sunil
-# FIRST VERSION : 2025-02-27
-# DESCRIPTION : Pytest test suite for the OpenAI CV parser and CV processor.
-#               All OpenAI API calls are mocked so no real API key is needed.
-#               Covers: successful parsing, API errors, JSON errors, fallback
-#               mode, validation, and the CVProcessor orchestrator.
-# */
-
 import json
 import os
 import pytest
