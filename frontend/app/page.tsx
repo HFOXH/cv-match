@@ -9,6 +9,13 @@ export default function SimpleMatcher() {
   const [cvLoaded, setCvLoaded] = useState(false);
   const [matchScore, setMatchScore] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cvSummary, setCvSummary] = useState("");
+  const [jobSummary, setJobSummary] = useState("");
+  const [requiredSkills, setRequiredSkills] = useState([]);
+  const [preferredSkills, setPreferredSkills] = useState([]);
+  const [experienceYears, setExperienceYears] = useState(null);
+  const [educationLevel, setEducationLevel] = useState(null);
+  const [keyPhrases, setKeyPhrases] = useState([]);
 
   const handleCVUpload = (event) => {
     const file = event.target.files[0];
@@ -18,35 +25,43 @@ export default function SimpleMatcher() {
     }
   };
 
- const handleMatch = async () => {
-  if (!cvLoaded) return;
-  setLoading(true);
+  const handleMatch = async () => {
+    if (!cvLoaded || !text.trim()) return;
+    setLoading(true);
 
-  try {
-    const formData = new FormData();
-    formData.append("file", cvFile);
+    try {
+      const formData = new FormData();
+      formData.append("file", cvFile);
+      formData.append("job_description", text);
 
-    const response = await fetch("http://localhost:8000/api/v1/cv/upload", {
-      method: "POST",
-      body: formData,
-    });
+      const response = await fetch("http://localhost:8000/api/v1/match", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!response.ok) {
-      const err = await response.json();
-      console.error("Error:", err.detail || err);
-      return;
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("Error:", err.detail || err);
+        return;
+      }
+
+      const result = await response.json();
+      console.log(result);
+
+      setMatchScore(result.match_score);
+      setCvSummary(result.cv_summary);
+      setJobSummary(result.job_summary);
+      setRequiredSkills(result.required_skills || []);
+      setPreferredSkills(result.preferred_skills || []);
+      setExperienceYears(result.experience_years);
+      setEducationLevel(result.education_level);
+      setKeyPhrases(result.key_phrases || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-
-    const result = await response.json();
-    console.log(result);
-    // TODO: Set the real match in based of the result
-    setMatchScore(result.summary ? 100 : 0);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-white text-gray-900 selection:bg-blue-100">
@@ -63,8 +78,13 @@ export default function SimpleMatcher() {
         }
 
         @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
         }
 
         .animate-fade-in-up {
@@ -92,10 +112,10 @@ export default function SimpleMatcher() {
             <span className="text-lg font-bold tracking-tight">CVMatch</span>
           </div>
           <div className="flex items-center gap-6">
-            <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium">
+            <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium cursor-pointer">
               Documentation
             </button>
-            <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium">
+            <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium cursor-pointer">
               Support
             </button>
           </div>
@@ -103,7 +123,6 @@ export default function SimpleMatcher() {
       </nav>
 
       <main className="max-w-4xl mx-auto px-6 pb-24">
-        
         {/* Hero */}
         <header className="text-center mb-16">
           <h1 className="text-5xl font-extrabold tracking-tight mb-4 text-gray-900">
@@ -115,34 +134,45 @@ export default function SimpleMatcher() {
         </header>
 
         <div className="grid gap-8">
-          
           {/* Card Principal */}
           <div className="bg-white rounded-3xl p-8 shadow-md border border-gray-100">
-            
             <div className="flex flex-col md:flex-row gap-6 mb-8">
-              
               {/* Upload CV */}
               <div className="flex-1">
-                <label className={`
+                <label
+                  className={`
                   relative cursor-pointer flex flex-col items-center justify-center p-8 
                   border-2 border-dashed rounded-2xl transition-all
-                  ${cvLoaded 
-                    ? 'border-green-300 bg-green-50' 
-                    : 'border-gray-200 hover:border-blue-400 bg-gray-50'}
-                `}>
-                  <input type="file" className="hidden" onChange={handleCVUpload} />
-                  <span className="text-3xl mb-2">{cvLoaded ? "✅" : "📄"}</span>
+                  ${
+                    cvLoaded
+                      ? "border-green-300 bg-green-50"
+                      : "border-gray-200 hover:border-blue-400 bg-gray-50"
+                  }
+                `}
+                >
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleCVUpload}
+                  />
+                  <span className="text-3xl mb-2">
+                    {cvLoaded ? "✅" : "📄"}
+                  </span>
                   <p className="text-sm font-semibold text-gray-700">
                     {cvLoaded ? cvFile.name : "upload your resume"}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">PDF o DOCX up to 5MB</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    PDF o DOCX up to 5MB
+                  </p>
                 </label>
               </div>
 
               {/* Match Score */}
               <div className="flex flex-col items-center justify-center px-8 border-l border-gray-100">
                 <MatchCircle percentage={matchScore ?? 0} size={120} />
-                <p className="mt-4 text-sm font-medium text-gray-400 uppercase tracking-widest">Match Score</p>
+                <p className="mt-4 text-sm font-medium text-gray-400 uppercase tracking-widest">
+                  Match Score
+                </p>
               </div>
             </div>
 
@@ -163,7 +193,7 @@ export default function SimpleMatcher() {
             <button
               onClick={handleMatch}
               disabled={loading || !cvLoaded}
-              className="w-full mt-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white font-bold rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full mt-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white font-bold rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -175,27 +205,74 @@ export default function SimpleMatcher() {
 
           {/* Análisis */}
           <div className="grid md:grid-cols-2 gap-6">
-            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Summary</h3>
-              <div className="h-24 flex items-center justify-center text-gray-400 italic">
-                {matchScore ? "Analysis successfully generated." : "Waiting data..."}
+            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm min-h-0">
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                Summary
+              </h3>
+              <div className="h-24 overflow-y-auto text-gray-400 italic">
+                {matchScore ? (
+                  <div className="text-sm text-gray-600 text-left space-y-2">
+                    <p>
+                      <strong>Job Summary:</strong>
+                    </p>
+                    <p>{jobSummary}</p>
+
+                    <p className="mt-4">
+                      <strong>Candidate Summary:</strong>
+                    </p>
+                    <p>{cvSummary}</p>
+                  </div>
+                ) : (
+                  "Waiting data..."
+                )}
               </div>
             </section>
-            
+
             <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Key points</h3>
-              <div className="h-24 flex items-center justify-center text-gray-400 italic">
-                {matchScore ? "3 strengths identified." : "Waiting data..."}
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                Key points
+              </h3>
+              <div className="h-24 overflow-y-auto text-gray-400 italic">
+                {matchScore ? (
+                  <div className="text-sm text-gray-600 text-left space-y-3">
+                    <div>
+                      <strong>Required Skills:</strong>
+                      <p>{requiredSkills.join(", ") || "None detected"}</p>
+                    </div>
+
+                    <div>
+                      <strong>Preferred Skills:</strong>
+                      <p>{preferredSkills.join(", ") || "None detected"}</p>
+                    </div>
+
+                    <div>
+                      <strong>Experience:</strong>
+                      <p>{experienceYears || "Not specified"}</p>
+                    </div>
+
+                    <div>
+                      <strong>Education:</strong>
+                      <p>{educationLevel || "Not specified"}</p>
+                    </div>
+
+                    <div>
+                      <strong>Key Phrases:</strong>
+                      <p>{keyPhrases.join(", ") || "None detected"}</p>
+                    </div>
+                  </div>
+                ) : (
+                  "Waiting data..."
+                )}
               </div>
             </section>
           </div>
-
         </div>
 
         {/* Footer Note */}
         <div className="mt-20 pt-12 border-t border-slate-100">
           <p className="text-center text-xs text-slate-400 tracking-wide">
-            Analysis generated through natural language processing · The results are indicative and do not replace human evaluation
+            Analysis generated through natural language processing · The results
+            are indicative and do not replace human evaluation
           </p>
         </div>
       </main>
