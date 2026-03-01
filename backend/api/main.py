@@ -1,14 +1,15 @@
+import io
+import uuid
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from cv_processor import CVProcessor
-from cv_processor.extractors.pdf_extractor import PDFExtractor
-from cv_processor.extractors.docx_extractor import DOCXExtractor
-from cv_processor.extractors.txt_extractor import TXTExtractor
 from cv_processor.exceptions import ProcessingError
-import uuid
-import io
+from cv_processor.extractors.docx_extractor import DOCXExtractor
+from cv_processor.extractors.pdf_extractor import PDFExtractor
+from cv_processor.extractors.txt_extractor import TXTExtractor
 
 app = FastAPI(title="CVMatch API")
 

@@ -7,8 +7,12 @@
 #               Handles both paragraphs and table content.
 # */
 
-from docx import Document
+import logging
 from typing import Optional
+
+from docx import Document
+
+logger = logging.getLogger(__name__)
 
 
 class DOCXExtractor:
@@ -44,5 +48,5 @@ class DOCXExtractor:
 
             return "\n".join(text) if text else None
         except Exception as e:
-            print(f"Error extracting DOCX text: {str(e)}")
+            logger.error("Error extracting DOCX text: %s", e)
             return None

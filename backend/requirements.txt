@@ -7,3 +7,4 @@ python-docx
 chardet
 pytest
 python-multipart
+spacy>=3.5.0

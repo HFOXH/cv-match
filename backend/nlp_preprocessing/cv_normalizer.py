@@ -1,0 +1,123 @@
+import json
+import os
+import logging
+from typing import Dict, Any, Optional
+from openai import OpenAI
+from dotenv import load_dotenv
+
+from .cleaner import TextCleaner
+
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+K_NORMALIZATION_SYSTEM_PROMPT = (
+    "You are a CV data normalizer. Return only valid JSON, no markdown."
+)
+
+K_NORMALIZATION_USER_PROMPT = """Normalize this parsed CV data for job matching purposes.
+Return ONLY valid JSON with these fields:
+
+{{
+    "skills": ["list of normalized, deduplicated skill names in lowercase"],
+    "experience_text": "single paragraph combining all work experience for semantic embedding",
+    "education_text": "single paragraph combining all education for semantic embedding",
+    "full_text_for_embedding": "complete natural-language summary of the candidate combining all sections"
+}}
+
+Rules for skills normalization:
+- Lowercase all skill names
+- Expand abbreviations (JS -> javascript, ML -> machine learning, AWS -> amazon web services, K8s -> kubernetes, etc.)
+- Merge duplicates (React.js and ReactJS are both "react")
+- Keep both technical and soft skills
+- Remove non-skill items if any
+
+Rules for text fields:
+- Write in natural, fluent language suitable for semantic similarity matching
+- Include all relevant details (titles, companies, degrees, institutions)
+- The full_text_for_embedding should read like a professional profile summary
+
+Parsed CV data:
+{cv_data}"""
+
+
+class CVDataNormalizer:
+    """OpenAI-powered normalization for parsed CV data.
+
+    Uses OpenAI to intelligently normalize skills (handling abbreviations,
+    variations, typos) and generate clean embedding text from CV sections.
+    Logs errors if OpenAI is unavailable or fails.
+    """
+
+    # /*
+    # * function name: __init__()
+    # * Description: Initialize the CV data normalizer with OpenAI client.
+    # * Parameter: openai_api_key : Optional[str] : OpenAI API key. If None,
+    # *              reads from OPENAI_API_KEY env var.
+    # * return: None
+    # */
+    def __init__(self, openai_api_key: Optional[str] = None):
+        api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        if api_key:
+            self.client = OpenAI(api_key=api_key)
+        else:
+            self.client = None
+            logger.error("No OpenAI API key provided. CV normalization will not work.")
+
+        logger.info("CVDataNormalizer initialized")
+
+    # /*
+    # * function name: normalize()
+    # * Description: Normalize OpenAI-parsed CV data for downstream matching.
+    # *              Uses OpenAI for intelligent normalization. Returns empty
+    # *              result and logs error if OpenAI is unavailable or fails.
+    # * Parameter: parsed_cv : dict : Dictionary from OpenAI parser with keys:
+    # *              contact, skills, experience, education, certifications, summary.
+    # * return: dict : Normalized data with skills, experience_text,
+    # *              education_text, and full_text_for_embedding.
+    # */
+    def normalize(self, parsed_cv: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.client:
+            logger.error("OpenAI client not available. Cannot normalize CV data.")
+            return self._empty_result()
+
+        try:
+            cv_data_str = json.dumps(parsed_cv, indent=2, default=str)
+            prompt = K_NORMALIZATION_USER_PROMPT.format(cv_data=cv_data_str)
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": K_NORMALIZATION_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.0,
+                max_tokens=1500,
+            )
+
+            result = response.choices[0].message.content.strip()
+            result = result.replace("```json", "").replace("```", "").strip()
+            normalized = json.loads(result)
+
+            return {
+                "skills": TextCleaner.normalize_skills(normalized.get("skills", [])),
+                "experience_text": normalized.get("experience_text", ""),
+                "education_text": normalized.get("education_text", ""),
+                "full_text_for_embedding": normalized.get("full_text_for_embedding", ""),
+            }
+
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse OpenAI response as JSON: %s", e)
+            return self._empty_result()
+        except Exception as e:
+            logger.error("OpenAI API call failed: %s", e)
+            return self._empty_result()
+
+    @staticmethod
+    def _empty_result() -> Dict[str, Any]:
+        return {
+            "skills": [],
+            "experience_text": "",
+            "education_text": "",
+            "full_text_for_embedding": "",
+        }
