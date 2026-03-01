@@ -9,7 +9,6 @@ from .exceptions import ProcessingError, ParsingError
 
 K_MIN_CV_TEXT_LENGTH = 50
 
-
 class CVProcessor:
     """Orchestrates text extraction and structured CV parsing."""
 

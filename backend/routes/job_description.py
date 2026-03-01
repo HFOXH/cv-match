@@ -23,7 +23,8 @@ async def preprocess_job_description(body: JDRequest):
             "preferred_skills": result.get("preferred_skills"),
             "experience_years": result.get("experience_years"),
             "education_level": result.get("education_level"),
-            "key_phrases": result.get("key_phrases")
+            "key_phrases": result.get("key_phrases"),
+            "summary": result.get("summary")
         }
 
     except Exception as e:

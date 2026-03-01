@@ -1,12 +1,3 @@
-# /*
-# FILE : docx_extractor.py
-# PROJECT : CVMatch - CV Processing Module (Task 1)
-# PROGRAMMER : Santiago Cardenas and Amel Sunil
-# FIRST VERSION : 2025-02-27
-# DESCRIPTION : Extracts raw text from DOCX (Word) files using python-docx.
-#               Handles both paragraphs and table content.
-# */
-
 import logging
 from typing import Optional
 
@@ -16,15 +7,18 @@ logger = logging.getLogger(__name__)
 
 
 class DOCXExtractor:
-    """Extract text from DOCX (Word) files."""
+    """
+    Extract text from DOCX (Microsoft Word) files.
 
-    # /*
-    # * function name: extract()
-    # * Description: Extract text from a DOCX file. Reads all paragraphs first,
-    # *              then extracts text from any tables in the document.
-    # * Parameter: file_path : str : Path to the DOCX file.
-    # * return: Optional[str] : Extracted text or None if extraction fails.
-    # */
+    This extractor reads all paragraphs and tables from a DOCX document and
+    concatenates their text into a single string. Useful for processing resumes,
+    reports, or any structured Word documents.
+
+    Methods
+    -------
+    extract(file_path)
+        Extracts and returns the text from the DOCX file, or None if extraction fails.
+    """
     @staticmethod
     def extract(file_path: str) -> Optional[str]:
         try:

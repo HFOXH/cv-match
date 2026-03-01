@@ -24,7 +24,8 @@ Return ONLY valid JSON with these fields:
     "preferred_skills": ["skills marked as preferred/nice-to-have/bonus"],
     "experience_years": "experience requirement as string (e.g., '3-5 years') or null",
     "education_level": "highest education mentioned (PhD/Master's/Bachelor's) or null",
-    "key_phrases": ["important multi-word phrases like 'machine learning engineer', 'distributed systems'"]
+    "key_phrases": ["important multi-word phrases like 'machine learning engineer', 'distributed systems'"],
+    "summary": "Concise summary of the job description, max 250 words"
 }}
 
 Rules:
@@ -32,6 +33,7 @@ Rules:
 - If a skill is not clearly required or preferred, put it in required_skills
 - Include both technical skills (Python, AWS) and soft skills (communication, leadership)
 - Key phrases should be bigrams/trigrams that capture the role essence
+- Summary should be clear, professional, and no more than 250 words
 
 Job Description:
 {jd_text}"""
@@ -95,6 +97,7 @@ class JobDescriptionPreprocessor:
             "preferred_skills": TextCleaner.normalize_skills(openai_extracted.get("preferred_skills", [])),
             "experience_years": openai_extracted.get("experience_years"),
             "education_level": openai_extracted.get("education_level"),
+            "summary": openai_extracted.get("summary"),
         }
 
     # /*
@@ -149,7 +152,7 @@ class JobDescriptionPreprocessor:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.0,
-                max_tokens=1000,
+                max_tokens=1200,
             )
 
             result = response.choices[0].message.content.strip()

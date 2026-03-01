@@ -9,15 +9,24 @@ logger = logging.getLogger(__name__)
 
 
 class PDFExtractor:
-    """Extract text from PDF files."""
+    """
+    Extract text from a PDF file.
 
-    # /*
-    # * function name: extract()
-    # * Description: Extract text from a PDF file page by page using pdfplumber.
-    # * Parameter: file_input : Union[str, Path, io.BytesIO] : File path or
-    # *              in-memory bytes buffer.
-    # * return: Optional[str] : Extracted text or None if extraction fails.
-    # */
+    Parameters
+    ----------
+    file_input : Union[str, Path, io.BytesIO]
+        Path to a PDF file, Path object, or a file-like bytes buffer.
+
+    Returns
+    -------
+    Optional[str]
+        The concatenated text from all pages of the PDF, or `None` if extraction fails.
+
+    Notes
+    -----
+    - Logs errors via the `logging` module.
+    - Extraction may be incomplete for PDFs with scanned images or unusual layouts.
+    """
     @staticmethod
     def extract(file_input: Union[str, Path, io.BytesIO]) -> Optional[str]:
         try:
