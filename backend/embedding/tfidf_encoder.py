@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 K_MAX_FEATURES = 5000
 K_NGRAM_RANGE = (1, 3)
 K_MIN_DF = 1
-K_MAX_DF = 0.8
+K_MAX_DF = 1.0
 
 
 class TFIDFEncoder:

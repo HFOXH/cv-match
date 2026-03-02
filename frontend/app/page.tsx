@@ -1,24 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, ChangeEvent } from "react";
 import MatchCircle from "@/components/MatchCircle";
 
 export default function SimpleMatcher() {
   const [text, setText] = useState("");
-  const [cvFile, setCvFile] = useState(null);
+  const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvLoaded, setCvLoaded] = useState(false);
-  const [matchScore, setMatchScore] = useState(null);
+  const [matchScore, setMatchScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [cvSummary, setCvSummary] = useState("");
   const [jobSummary, setJobSummary] = useState("");
-  const [requiredSkills, setRequiredSkills] = useState([]);
-  const [preferredSkills, setPreferredSkills] = useState([]);
-  const [experienceYears, setExperienceYears] = useState(null);
-  const [educationLevel, setEducationLevel] = useState(null);
-  const [keyPhrases, setKeyPhrases] = useState([]);
+  const [requiredSkills, setRequiredSkills] = useState<string[]>([]);
+  const [preferredSkills, setPreferredSkills] = useState<string[]>([]);
+  const [experienceYears, setExperienceYears] = useState<string | null>(null);
+  const [educationLevel, setEducationLevel] = useState<string | null>(null);
+  const [keyPhrases, setKeyPhrases] = useState<string[]>([]);
+  const [overallSimilarity, setOverallSimilarity] = useState<number | null>(null);
+  const [sectionSimilarities, setSectionSimilarities] = useState<Record<string, number>>({});
+  const [tfidfSimilarity, setTfidfSimilarity] = useState<number | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
 
-  const handleCVUpload = (event) => {
-    const file = event.target.files[0];
+  const getBarColor = (value: number) => {
+    if (value >= 70) return "bg-emerald-500";
+    if (value >= 40) return "bg-amber-500";
+    return "bg-red-500";
+  };
+
+  const handleCVUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       setCvFile(file);
       setCvLoaded(true);
@@ -31,7 +41,7 @@ export default function SimpleMatcher() {
 
     try {
       const formData = new FormData();
-      formData.append("file", cvFile);
+      formData.append("file", cvFile!);
       formData.append("job_description", text);
 
       const response = await fetch("http://localhost:8000/api/v1/match", {
@@ -56,6 +66,10 @@ export default function SimpleMatcher() {
       setExperienceYears(result.experience_years);
       setEducationLevel(result.education_level);
       setKeyPhrases(result.key_phrases || []);
+      setOverallSimilarity(result.overall_similarity);
+      setSectionSimilarities(result.section_similarities || {});
+      setTfidfSimilarity(result.tfidf_similarity);
+      setIsFallback(result.is_fallback || false);
     } catch (err) {
       console.error(err);
     } finally {
@@ -159,7 +173,7 @@ export default function SimpleMatcher() {
                     {cvLoaded ? "✅" : "📄"}
                   </span>
                   <p className="text-sm font-semibold text-gray-700">
-                    {cvLoaded ? cvFile.name : "upload your resume"}
+                    {cvLoaded ? cvFile?.name : "upload your resume"}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     PDF o DOCX up to 5MB
@@ -169,7 +183,7 @@ export default function SimpleMatcher() {
 
               {/* Match Score */}
               <div className="flex flex-col items-center justify-center px-8 border-l border-gray-100">
-                <MatchCircle percentage={matchScore ?? 0} size={120} />
+                <MatchCircle percentage={matchScore ?? 0} />
                 <p className="mt-4 text-sm font-medium text-gray-400 uppercase tracking-widest">
                   Match Score
                 </p>
@@ -266,6 +280,98 @@ export default function SimpleMatcher() {
               </div>
             </section>
           </div>
+
+          {/* Score Breakdown */}
+          {matchScore !== null && (
+            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
+                Score Breakdown
+              </h3>
+
+              {isFallback && (
+                <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                  Limited analysis — only overall and keyword matching available (section breakdown unavailable)
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Overall Semantic */}
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600 font-medium">Overall Semantic</span>
+                    <span className="text-gray-500">{overallSimilarity ?? 0}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                    <div
+                      className={`h-2.5 rounded-full transition-all ${getBarColor(overallSimilarity ?? 0)}`}
+                      style={{ width: `${Math.min(overallSimilarity ?? 0, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Section-level bars (hidden in fallback mode) */}
+                {!isFallback && (
+                  <>
+                    {/* Skills Match */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 font-medium">Skills Match</span>
+                        <span className="text-gray-500">{sectionSimilarities.skills_semantic ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5">
+                        <div
+                          className={`h-2.5 rounded-full transition-all ${getBarColor(sectionSimilarities.skills_semantic ?? 0)}`}
+                          style={{ width: `${Math.min(sectionSimilarities.skills_semantic ?? 0, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Experience Relevance */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 font-medium">Experience Relevance</span>
+                        <span className="text-gray-500">{sectionSimilarities.experience ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5">
+                        <div
+                          className={`h-2.5 rounded-full transition-all ${getBarColor(sectionSimilarities.experience ?? 0)}`}
+                          style={{ width: `${Math.min(sectionSimilarities.experience ?? 0, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Education Alignment */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 font-medium">Education Alignment</span>
+                        <span className="text-gray-500">{sectionSimilarities.education ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5">
+                        <div
+                          className={`h-2.5 rounded-full transition-all ${getBarColor(sectionSimilarities.education ?? 0)}`}
+                          style={{ width: `${Math.min(sectionSimilarities.education ?? 0, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Keyword Match (TF-IDF) */}
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600 font-medium">Keyword Match</span>
+                    <span className="text-gray-500">{tfidfSimilarity ?? 0}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                    <div
+                      className={`h-2.5 rounded-full transition-all ${getBarColor(tfidfSimilarity ?? 0)}`}
+                      style={{ width: `${Math.min(tfidfSimilarity ?? 0, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Footer Note */}
