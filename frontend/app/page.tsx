@@ -20,6 +20,18 @@ export default function SimpleMatcher() {
   const [sectionSimilarities, setSectionSimilarities] = useState<Record<string, number>>({});
   const [tfidfSimilarity, setTfidfSimilarity] = useState<number | null>(null);
   const [isFallback, setIsFallback] = useState(false);
+  const [matchRating, setMatchRating] = useState("");
+  const [recommendation, setRecommendation] = useState("");
+  const [skillDetails, setSkillDetails] = useState<{
+    matched_skills: string[];
+    missing_skills: string[];
+    extra_skills: string[];
+    matched_count: number;
+    job_skills_count: number;
+    score: number;
+  } | null>(null);
+  const [strengths, setStrengths] = useState<string[]>([]);
+  const [gaps, setGaps] = useState<string[]>([]);
 
   const getBarColor = (value: number) => {
     if (value >= 70) return "bg-emerald-500";
@@ -70,6 +82,11 @@ export default function SimpleMatcher() {
       setSectionSimilarities(result.section_similarities || {});
       setTfidfSimilarity(result.tfidf_similarity);
       setIsFallback(result.is_fallback || false);
+      setMatchRating(result.match_rating || "");
+      setRecommendation(result.recommendation || "");
+      setSkillDetails(result.skill_details || null);
+      setStrengths(result.strengths || []);
+      setGaps(result.gaps || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -184,9 +201,22 @@ export default function SimpleMatcher() {
               {/* Match Score */}
               <div className="flex flex-col items-center justify-center px-8 border-l border-gray-100">
                 <MatchCircle percentage={matchScore ?? 0} />
-                <p className="mt-4 text-sm font-medium text-gray-400 uppercase tracking-widest">
-                  Match Score
-                </p>
+                {matchRating && (
+                  <span className={`mt-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                    matchScore !== null && matchScore >= 90 ? "bg-emerald-100 text-emerald-700" :
+                    matchScore !== null && matchScore >= 75 ? "bg-lime-100 text-lime-700" :
+                    matchScore !== null && matchScore >= 60 ? "bg-amber-100 text-amber-700" :
+                    matchScore !== null && matchScore >= 40 ? "bg-orange-100 text-orange-700" :
+                    "bg-red-100 text-red-700"
+                  }`}>
+                    {matchRating}
+                  </span>
+                )}
+                {recommendation && (
+                  <p className="mt-2 text-xs text-gray-400 text-center max-w-[180px]">
+                    {recommendation}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -371,6 +401,83 @@ export default function SimpleMatcher() {
                 </div>
               </div>
             </section>
+          )}
+
+          {/* Skill Details */}
+          {matchScore !== null && skillDetails && !isFallback && (
+            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+                  Skill Analysis
+                </h3>
+                <span className="text-sm font-semibold text-gray-500">
+                  {skillDetails.matched_count}/{skillDetails.job_skills_count} skills matched
+                </span>
+              </div>
+
+              {skillDetails.matched_skills.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-2">Matched Skills</p>
+                  <div className="flex flex-wrap gap-2">
+                    {skillDetails.matched_skills.map((skill: string) => (
+                      <span key={skill} className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {skillDetails.missing_skills.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-2">Missing Skills</p>
+                  <div className="flex flex-wrap gap-2">
+                    {skillDetails.missing_skills.map((skill: string) => (
+                      <span key={skill} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-medium rounded-full border border-red-200">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Strengths & Gaps */}
+          {matchScore !== null && (strengths.length > 0 || gaps.length > 0) && (
+            <div className="grid md:grid-cols-2 gap-6">
+              {strengths.length > 0 && (
+                <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                  <h3 className="text-sm font-bold text-emerald-500 uppercase tracking-wider mb-4">
+                    Strengths
+                  </h3>
+                  <ul className="space-y-2">
+                    {strengths.map((item, i) => (
+                      <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                        <span className="text-emerald-500 mt-0.5">+</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {gaps.length > 0 && (
+                <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                  <h3 className="text-sm font-bold text-orange-500 uppercase tracking-wider mb-4">
+                    Gaps
+                  </h3>
+                  <ul className="space-y-2">
+                    {gaps.map((item, i) => (
+                      <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                        <span className="text-orange-500 mt-0.5">-</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
           )}
         </div>
 

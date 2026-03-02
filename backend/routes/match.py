@@ -42,6 +42,7 @@ async def match_cv_with_jd(
         match_result = matching_service.compute_match(cv_vectors, jd_vectors)
 
         return {
+            # Existing fields (backward compat)
             "cv_id": cv_result["cv_id"],
             "match_score": match_result["match_score"],
             "overall_similarity": match_result["overall_similarity"],
@@ -55,7 +56,17 @@ async def match_cv_with_jd(
             "education_level": jd_result.get("education_level"),
             "key_phrases": jd_result.get("key_phrases"),
             "job_summary": jd_result.get("summary"),
-            "is_fallback": match_result["_fallback"],
+            "is_fallback": match_result.get("_fallback", False),
+
+            # New fields from SimilarityEngine
+            "match_percentage": match_result["match_percentage"],
+            "match_rating": match_result["match_rating"],
+            "recommendation": match_result["recommendation"],
+            "confidence": match_result["confidence"],
+            "breakdown": match_result["breakdown"],
+            "skill_details": match_result.get("skill_details"),
+            "strengths": match_result.get("strengths", []),
+            "gaps": match_result.get("gaps", []),
         }
 
     except Exception as e:
