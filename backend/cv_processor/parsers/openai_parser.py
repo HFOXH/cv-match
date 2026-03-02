@@ -17,6 +17,8 @@ Do not invent or hallucinate information — only extract what is explicitly pre
 
 K_USER_PROMPT_TEMPLATE = """Parse the following CV/resume text and extract structured information.
 
+IMPORTANT: For the "skills" field, extract ALL skills, technologies, tools, and frameworks from the ENTIRE CV — including the Skills/Technical Skills section, "Technologies used" lines under each job, project descriptions, and certifications. Do not limit extraction to just the Skills section.
+
 Return a JSON object with this exact schema:
 {{
     "contact": {{
