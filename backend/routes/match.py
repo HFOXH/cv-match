@@ -1,57 +1,52 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from typing import List
-import numpy as np
 
 from services.cv_service import CVService
 from services.job_description_service import JDService
 from services.normalization_service import NormalizationService
-from openai import OpenAI
+from services.matching_service import MatchingService
 
 router = APIRouter()
 
 job_description_service = JDService()
 normalization_service = NormalizationService()
+matching_service = MatchingService()
 
-openai_client = OpenAI(api_key=None)
-
-def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
-    vec1 = np.array(vec1)
-    vec2 = np.array(vec2)
-    if np.linalg.norm(vec1) == 0 or np.linalg.norm(vec2) == 0:
-        return 0.0
-    return float(np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))) * 100  # porcentaje
 
 @router.post("/api/v1/match")
 async def match_cv_with_jd(
     file: UploadFile = File(...),
-    job_description: str = Form(...)
+    job_description: str = Form(...),
 ):
     try:
+        # Step 1: Process CV (extract + parse)
         cv_result = CVService.process_cv(file)
+        parsing_method = cv_result.get("parsing_method", "openai")
+
+        # Step 2: Normalize CV data
         normalized_cv = normalization_service.normalize(cv_result["parsed_data"])
 
+        # Step 3: Preprocess job description
         jd_result = job_description_service.process(job_description)
 
-        cv_text = normalized_cv.get("full_text_for_embedding", "")
-        jd_text = jd_result.get("cleaned_text", "")
-
-        cv_embedding_resp = openai_client.embeddings.create(
-            model="text-embedding-3-small",
-            input=cv_text
-        )
-        jd_embedding_resp = openai_client.embeddings.create(
-            model="text-embedding-3-small",
-            input=jd_text
+        # Step 4: Encode both using HybridEncoder (via MatchingService)
+        cv_vectors = matching_service.encode_cv(
+            cv_id=cv_result["cv_id"],
+            normalized_cv=normalized_cv,
+            raw_text=cv_result.get("raw_text", ""),
+            parsing_method=parsing_method,
         )
 
-        cv_embedding = cv_embedding_resp.data[0].embedding
-        jd_embedding = jd_embedding_resp.data[0].embedding
+        jd_vectors = matching_service.encode_jd(jd_result)
 
-        score = cosine_similarity(cv_embedding, jd_embedding)
+        # Step 5: Compute match
+        match_result = matching_service.compute_match(cv_vectors, jd_vectors)
 
         return {
             "cv_id": cv_result["cv_id"],
-            "match_score": round(score, 2),
+            "match_score": match_result["match_score"],
+            "overall_similarity": match_result["overall_similarity"],
+            "section_similarities": match_result["section_similarities"],
+            "tfidf_similarity": match_result["tfidf_similarity"],
             "cv_summary": cv_result["parsed_data"].get("summary"),
             "normalized_skills": normalized_cv.get("skills"),
             "required_skills": jd_result.get("required_skills"),
@@ -60,6 +55,7 @@ async def match_cv_with_jd(
             "education_level": jd_result.get("education_level"),
             "key_phrases": jd_result.get("key_phrases"),
             "job_summary": jd_result.get("summary"),
+            "is_fallback": match_result["_fallback"],
         }
 
     except Exception as e:
