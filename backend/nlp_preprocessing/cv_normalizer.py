@@ -33,9 +33,10 @@ Rules for skills normalization:
 - Remove non-skill items if any
 
 Rules for text fields:
-- Write in natural, fluent language suitable for semantic similarity matching
-- Include all relevant details (titles, companies, degrees, institutions)
+- Write experience_text as a factual summary of capabilities and domains: focus on years of experience, types of roles held, industries/domains, and key responsibilities. Example: "3+ years of full stack development experience with Vue, React, and Ruby on Rails. Experience in web application development, data collection tools, and ethical hacking. Skilled in project management and team leadership using Scrum methodology."
+- Write education_text as a factual summary of qualifications: focus on degree levels, fields of study, and institutions. Example: "Postgraduate in AI and Machine Learning from Cambrian College. Master's degree in Cybersecurity from Isabel I University. Bachelor's in Systems Engineering."
 - The full_text_for_embedding should read like a professional profile summary
+- All text fields should use neutral, factual language that works for both CV-to-JD and JD-to-CV comparison
 
 Parsed CV data:
 {cv_data}"""

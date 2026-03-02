@@ -1,12 +1,33 @@
+import json
 import math
+import os
 import logging
 from difflib import SequenceMatcher
 from typing import Dict, Any, List, Optional
 
 import numpy as np
+from openai import OpenAI
 from sklearn.metrics.pairwise import cosine_similarity
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+K_SEMANTIC_MATCH_PROMPT = """Given these two skill lists, find semantically equivalent pairs.
+
+CV skills (candidate has): {cv_skills}
+JD skills (job requires): {jd_skills}
+
+Return ONLY valid JSON — a list of matched pairs where the skills mean the same thing or one clearly covers the other:
+{{"matches": [["cv_skill", "jd_skill"], ...]}}
+
+Rules:
+- Only match skills that are genuinely equivalent or where the CV skill clearly satisfies the JD requirement
+- "problem-solving" matches "problem resolution" or "troubleshooting"
+- "team collaboration" matches "teamwork"
+- Do NOT match skills that are merely related (e.g., "Python" and "JavaScript" are both programming languages but NOT equivalent)
+- If no semantic matches exist, return {{"matches": []}}"""
 
 K_SIGMOID_STEEPNESS = 12
 K_SIGMOID_MIDPOINT = 0.45
@@ -38,6 +59,14 @@ class SimilarityEngine:
     """Core scoring engine combining Jaccard skill matching, cosine similarity,
     TF-IDF keyword matching, and sigmoid calibration into a match report."""
 
+    def __init__(self):
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            self.openai_client = OpenAI(api_key=api_key)
+        else:
+            self.openai_client = None
+            logger.warning("No OpenAI API key — semantic skill matching disabled")
+
     def calculate_match(
         self,
         cv_vectors: dict,
@@ -53,6 +82,10 @@ class SimilarityEngine:
             cv_vectors.get("skills_list", []),
             jd_vectors.get("skills_list", []),
         )
+
+        # Enhance with OpenAI semantic matching for remaining unmatched skills
+        if skill_details["missing_skills"] and self.openai_client:
+            skill_details = self._enhance_with_semantic_matching(skill_details)
 
         section_sims = self._section_similarities(cv_vectors, jd_vectors)
 
@@ -155,11 +188,89 @@ class SimilarityEngine:
     def _section_similarities(self, cv_vectors: dict, jd_vectors: dict) -> dict:
         cv_emb = cv_vectors["section_embeddings"]
         jd_emb = jd_vectors["section_embeddings"]
+
+        # Compare experience↔experience and education↔education when available,
+        # fall back to comparing against JD overall if section not extracted
+        jd_experience = jd_emb.get("experience") or jd_emb.get("overall")
+        jd_education = jd_emb.get("education") or jd_emb.get("overall")
+
         return {
             "skills_semantic": self._cosine_sim(cv_emb.get("skills"), jd_emb.get("skills")),
-            "experience": self._cosine_sim(cv_emb.get("experience"), jd_emb.get("overall")),
-            "education": self._cosine_sim(cv_emb.get("education"), jd_emb.get("overall")),
+            "experience": self._cosine_sim(cv_emb.get("experience"), jd_experience),
+            "education": self._cosine_sim(cv_emb.get("education"), jd_education),
         }
+
+    def _enhance_with_semantic_matching(self, skill_details: dict) -> dict:
+        """Use OpenAI to find semantic matches among skills that exact+fuzzy missed."""
+        missing = skill_details["missing_skills"]
+        extra = skill_details["extra_skills"]
+
+        if not missing or not extra:
+            return skill_details
+
+        semantic_pairs = self._semantic_skill_match(extra, missing)
+
+        if not semantic_pairs:
+            return skill_details
+
+        newly_matched_jd = set()
+        newly_matched_cv = set()
+        for cv_skill, jd_skill in semantic_pairs:
+            cv_low = cv_skill.lower().strip()
+            jd_low = jd_skill.lower().strip()
+            if cv_low in {s.lower() for s in extra} and jd_low in {s.lower() for s in missing}:
+                newly_matched_jd.add(jd_low)
+                newly_matched_cv.add(cv_low)
+
+        if not newly_matched_jd:
+            return skill_details
+
+        updated_matched = sorted(set(skill_details["matched_skills"]) | newly_matched_jd)
+        updated_missing = sorted(set(skill_details["missing_skills"]) - newly_matched_jd)
+        updated_extra = sorted(set(skill_details["extra_skills"]) - newly_matched_cv)
+        matched_count = len(updated_matched)
+
+        union_size = skill_details["cv_skills_count"] + skill_details["job_skills_count"] - matched_count
+        score = matched_count / union_size if union_size > 0 else 0.0
+
+        logger.info("Semantic matching found %d additional pairs", len(newly_matched_jd))
+
+        return {
+            "score": score,
+            "matched_skills": updated_matched,
+            "missing_skills": updated_missing,
+            "extra_skills": updated_extra,
+            "cv_skills_count": skill_details["cv_skills_count"],
+            "job_skills_count": skill_details["job_skills_count"],
+            "matched_count": matched_count,
+        }
+
+    def _semantic_skill_match(self, cv_skills: list, jd_skills: list) -> list:
+        """Send unmatched skills to GPT-4o-mini to find semantic equivalents."""
+        prompt = K_SEMANTIC_MATCH_PROMPT.format(
+            cv_skills=json.dumps(cv_skills),
+            jd_skills=json.dumps(jd_skills),
+        )
+
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "Return only valid JSON."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.0,
+                max_tokens=500,
+            )
+
+            result = response.choices[0].message.content.strip()
+            result = result.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(result)
+            return parsed.get("matches", [])
+
+        except Exception as e:
+            logger.error("Semantic skill matching failed: %s", e)
+            return []
 
     def _calculate_fallback(self, cv_vectors, jd_vectors, tfidf_sim) -> dict:
         overall_sbert = self._cosine_sim(

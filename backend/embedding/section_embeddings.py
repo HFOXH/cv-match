@@ -84,17 +84,25 @@ class SectionEmbeddingGenerator:
             section_names.append("skills")
             section_texts.append(", ".join(all_jd_skills))
 
+        if preprocessed_jd.get("experience_requirements"):
+            section_names.append("experience")
+            section_texts.append(preprocessed_jd["experience_requirements"])
+
+        if preprocessed_jd.get("education_requirements"):
+            section_names.append("education")
+            section_texts.append(preprocessed_jd["education_requirements"])
+
         if preprocessed_jd.get("cleaned_text"):
             section_names.append("overall")
             section_texts.append(preprocessed_jd["cleaned_text"])
 
         if not section_texts:
             logger.warning("No JD section texts available for embedding")
-            return {"skills": None, "overall": None}
+            return {"skills": None, "experience": None, "education": None, "overall": None}
 
         embeddings = self.encoder.encode_batch(section_texts)
 
-        result = {"skills": None, "overall": None}
+        result = {"skills": None, "experience": None, "education": None, "overall": None}
         for name, embedding in zip(section_names, embeddings):
             result[name] = embedding
 
