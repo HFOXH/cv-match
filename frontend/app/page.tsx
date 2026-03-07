@@ -2,6 +2,7 @@
 
 import { useState, ChangeEvent } from "react";
 import MatchCircle from "@/components/MatchCircle";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function SimpleMatcher() {
   const [text, setText] = useState("");
@@ -95,7 +96,7 @@ export default function SimpleMatcher() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 selection:bg-blue-100">
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <style jsx>{`
         @keyframes fadeInUp {
           from {
@@ -136,19 +137,20 @@ export default function SimpleMatcher() {
       `}</style>
 
       {/* Minimal Header */}
-      <nav className="border-b border-slate-100 mb-4">
+      <nav className="border-b border-slate-100 dark:border-gray-800 mb-4">
         <div className="max-w-6xl mx-auto px-8 py-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-8 bg-slate-950 rounded-full" />
+            <div className="w-1.5 h-8 bg-slate-950 dark:bg-white rounded-full" />
             <span className="text-lg font-bold tracking-tight">CVMatch</span>
           </div>
           <div className="flex items-center gap-6">
-            <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium cursor-pointer">
+            <button className="text-sm text-slate-500 dark:text-gray-400 hover:text-slate-950 dark:hover:text-white transition-colors font-medium cursor-pointer">
               Documentation
             </button>
-            <button className="text-sm text-slate-500 hover:text-slate-950 transition-colors font-medium cursor-pointer">
+            <button className="text-sm text-slate-500 dark:text-gray-400 hover:text-slate-950 dark:hover:text-white transition-colors font-medium cursor-pointer">
               Support
             </button>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
@@ -156,17 +158,17 @@ export default function SimpleMatcher() {
       <main className="max-w-4xl mx-auto px-6 pb-24">
         {/* Hero */}
         <header className="text-center mb-16">
-          <h1 className="text-5xl font-extrabold tracking-tight mb-4 text-gray-900">
+          <h1 className="text-5xl font-extrabold tracking-tight mb-4 text-gray-900 dark:text-white">
             Perfect Match
           </h1>
-          <p className="text-gray-500 text-lg">
+          <p className="text-gray-500 dark:text-gray-400 text-lg">
             Upload your CV and compare it with any job description in seconds.
           </p>
         </header>
 
         <div className="grid gap-8">
           {/* Card Principal */}
-          <div className="bg-white rounded-3xl p-8 shadow-md border border-gray-100">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 shadow-md border border-gray-100 dark:border-gray-800 transition-colors">
             <div className="flex flex-col md:flex-row gap-6 mb-8">
               {/* Upload CV */}
               <div className="flex-1">
@@ -176,8 +178,8 @@ export default function SimpleMatcher() {
                   border-2 border-dashed rounded-2xl transition-all
                   ${
                     cvLoaded
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-200 hover:border-blue-400 bg-gray-50"
+                      ? "border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-700/50"
+                      : "border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 bg-gray-50 dark:bg-gray-800/50"
                   }
                 `}
                 >
@@ -189,31 +191,31 @@ export default function SimpleMatcher() {
                   <span className="text-3xl mb-2">
                     {cvLoaded ? "✅" : "📄"}
                   </span>
-                  <p className="text-sm font-semibold text-gray-700">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                     {cvLoaded ? cvFile?.name : "upload your resume"}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     PDF o DOCX up to 5MB
                   </p>
                 </label>
               </div>
 
               {/* Match Score */}
-              <div className="flex flex-col items-center justify-center px-8 border-l border-gray-100">
+              <div className="flex flex-col items-center justify-center px-8 border-l border-gray-100 dark:border-gray-800">
                 <MatchCircle percentage={matchScore ?? 0} />
                 {matchRating && (
                   <span className={`mt-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                    matchScore !== null && matchScore >= 90 ? "bg-emerald-100 text-emerald-700" :
-                    matchScore !== null && matchScore >= 75 ? "bg-lime-100 text-lime-700" :
-                    matchScore !== null && matchScore >= 60 ? "bg-amber-100 text-amber-700" :
-                    matchScore !== null && matchScore >= 40 ? "bg-orange-100 text-orange-700" :
-                    "bg-red-100 text-red-700"
+                    matchScore !== null && matchScore >= 90 ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" :
+                    matchScore !== null && matchScore >= 75 ? "bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400" :
+                    matchScore !== null && matchScore >= 60 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
+                    matchScore !== null && matchScore >= 40 ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400" :
+                    "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                   }`}>
                     {matchRating}
                   </span>
                 )}
                 {recommendation && (
-                  <p className="mt-2 text-xs text-gray-400 text-center max-w-[180px]">
+                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 text-center max-w-[180px]">
                     {recommendation}
                   </p>
                 )}
@@ -222,14 +224,14 @@ export default function SimpleMatcher() {
 
             {/* Textarea */}
             <div className="space-y-4">
-              <label className="text-sm font-semibold text-gray-700 ml-1">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-1">
                 Job Description
               </label>
               <textarea
                 placeholder="Paste here the job description..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="w-full p-5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/30 min-h-[200px] resize-none text-gray-700 transition-all"
+                className="w-full p-5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500/30 min-h-[200px] resize-none text-gray-700 dark:text-gray-200 transition-all outline-none"
               />
             </div>
 
@@ -237,7 +239,7 @@ export default function SimpleMatcher() {
             <button
               onClick={handleMatch}
               disabled={loading || !cvLoaded}
-              className="w-full mt-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white font-bold rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full mt-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white font-bold rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -249,13 +251,13 @@ export default function SimpleMatcher() {
 
           {/* Análisis */}
           <div className="grid md:grid-cols-2 gap-6">
-            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm min-h-0">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+            <section className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm min-h-0 transition-colors">
+              <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
                 Summary
               </h3>
-              <div className="h-24 overflow-y-auto text-gray-400 italic">
+              <div className="h-24 overflow-y-auto text-gray-400 dark:text-gray-500 italic">
                 {matchScore ? (
-                  <div className="text-sm text-gray-600 text-left space-y-2">
+                  <div className="text-sm text-gray-600 dark:text-gray-300 text-left space-y-2 not-italic">
                     <p>
                       <strong>Job Summary:</strong>
                     </p>
@@ -272,13 +274,13 @@ export default function SimpleMatcher() {
               </div>
             </section>
 
-            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+            <section className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
+              <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
                 Key points
               </h3>
-              <div className="h-24 overflow-y-auto text-gray-400 italic">
+              <div className="h-24 overflow-y-auto text-gray-400 dark:text-gray-500 italic">
                 {matchScore ? (
-                  <div className="text-sm text-gray-600 text-left space-y-3">
+                  <div className="text-sm text-gray-600 dark:text-gray-300 text-left space-y-3 not-italic">
                     <div>
                       <strong>Required Skills:</strong>
                       <p>{requiredSkills.join(", ") || "None detected"}</p>
@@ -313,13 +315,13 @@ export default function SimpleMatcher() {
 
           {/* Score Breakdown */}
           {matchScore !== null && (
-            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
+            <section className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
+              <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-6">
                 Score Breakdown
               </h3>
 
               {isFallback && (
-                <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                <div className="mb-4 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl text-sm text-amber-700 dark:text-amber-400">
                   Limited analysis — only overall and keyword matching available (section breakdown unavailable)
                 </div>
               )}
@@ -328,10 +330,10 @@ export default function SimpleMatcher() {
                 {/* Overall Semantic */}
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600 font-medium">Overall Semantic</span>
-                    <span className="text-gray-500">{overallSimilarity ?? 0}%</span>
+                    <span className="text-gray-600 dark:text-gray-300 font-medium">Overall Semantic</span>
+                    <span className="text-gray-500 dark:text-gray-400">{overallSimilarity ?? 0}%</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
                     <div
                       className={`h-2.5 rounded-full transition-all ${getBarColor(overallSimilarity ?? 0)}`}
                       style={{ width: `${Math.min(overallSimilarity ?? 0, 100)}%` }}
@@ -345,10 +347,10 @@ export default function SimpleMatcher() {
                     {/* Skills Match */}
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 font-medium">Skills Match</span>
-                        <span className="text-gray-500">{sectionSimilarities.skills_semantic ?? 0}%</span>
+                        <span className="text-gray-600 dark:text-gray-300 font-medium">Skills Match</span>
+                        <span className="text-gray-500 dark:text-gray-400">{sectionSimilarities.skills_semantic ?? 0}%</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2.5">
+                      <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
                         <div
                           className={`h-2.5 rounded-full transition-all ${getBarColor(sectionSimilarities.skills_semantic ?? 0)}`}
                           style={{ width: `${Math.min(sectionSimilarities.skills_semantic ?? 0, 100)}%` }}
@@ -359,10 +361,10 @@ export default function SimpleMatcher() {
                     {/* Experience Relevance */}
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 font-medium">Experience Relevance</span>
-                        <span className="text-gray-500">{sectionSimilarities.experience ?? 0}%</span>
+                        <span className="text-gray-600 dark:text-gray-300 font-medium">Experience Relevance</span>
+                        <span className="text-gray-500 dark:text-gray-400">{sectionSimilarities.experience ?? 0}%</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2.5">
+                      <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
                         <div
                           className={`h-2.5 rounded-full transition-all ${getBarColor(sectionSimilarities.experience ?? 0)}`}
                           style={{ width: `${Math.min(sectionSimilarities.experience ?? 0, 100)}%` }}
@@ -373,10 +375,10 @@ export default function SimpleMatcher() {
                     {/* Education Alignment */}
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 font-medium">Education Alignment</span>
-                        <span className="text-gray-500">{sectionSimilarities.education ?? 0}%</span>
+                        <span className="text-gray-600 dark:text-gray-300 font-medium">Education Alignment</span>
+                        <span className="text-gray-500 dark:text-gray-400">{sectionSimilarities.education ?? 0}%</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2.5">
+                      <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
                         <div
                           className={`h-2.5 rounded-full transition-all ${getBarColor(sectionSimilarities.education ?? 0)}`}
                           style={{ width: `${Math.min(sectionSimilarities.education ?? 0, 100)}%` }}
@@ -389,10 +391,10 @@ export default function SimpleMatcher() {
                 {/* Keyword Match (TF-IDF) */}
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600 font-medium">Keyword Match</span>
-                    <span className="text-gray-500">{tfidfSimilarity ?? 0}%</span>
+                    <span className="text-gray-600 dark:text-gray-300 font-medium">Keyword Match</span>
+                    <span className="text-gray-500 dark:text-gray-400">{tfidfSimilarity ?? 0}%</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
                     <div
                       className={`h-2.5 rounded-full transition-all ${getBarColor(tfidfSimilarity ?? 0)}`}
                       style={{ width: `${Math.min(tfidfSimilarity ?? 0, 100)}%` }}
@@ -405,22 +407,22 @@ export default function SimpleMatcher() {
 
           {/* Skill Details */}
           {matchScore !== null && skillDetails && !isFallback && (
-            <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <section className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   Skill Analysis
                 </h3>
-                <span className="text-sm font-semibold text-gray-500">
+                <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
                   {skillDetails.matched_count}/{skillDetails.job_skills_count} skills matched
                 </span>
               </div>
 
               {skillDetails.matched_skills.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-2">Matched Skills</p>
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-500 uppercase tracking-wide mb-2">Matched Skills</p>
                   <div className="flex flex-wrap gap-2">
                     {skillDetails.matched_skills.map((skill: string) => (
-                      <span key={skill} className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">
+                      <span key={skill} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium rounded-full border border-emerald-200 dark:border-emerald-800/50">
                         {skill}
                       </span>
                     ))}
@@ -430,10 +432,10 @@ export default function SimpleMatcher() {
 
               {skillDetails.missing_skills.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-2">Missing Skills</p>
+                  <p className="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wide mb-2">Missing Skills</p>
                   <div className="flex flex-wrap gap-2">
                     {skillDetails.missing_skills.map((skill: string) => (
-                      <span key={skill} className="px-3 py-1 bg-red-50 text-red-600 text-xs font-medium rounded-full border border-red-200">
+                      <span key={skill} className="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium rounded-full border border-red-200 dark:border-red-800/50">
                         {skill}
                       </span>
                     ))}
@@ -447,13 +449,13 @@ export default function SimpleMatcher() {
           {matchScore !== null && (strengths.length > 0 || gaps.length > 0) && (
             <div className="grid md:grid-cols-2 gap-6">
               {strengths.length > 0 && (
-                <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                <section className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
                   <h3 className="text-sm font-bold text-emerald-500 uppercase tracking-wider mb-4">
                     Strengths
                   </h3>
                   <ul className="space-y-2">
                     {strengths.map((item, i) => (
-                      <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                      <li key={i} className="text-sm text-gray-600 dark:text-gray-300 flex items-start gap-2">
                         <span className="text-emerald-500 mt-0.5">+</span>
                         {item}
                       </li>
@@ -463,13 +465,13 @@ export default function SimpleMatcher() {
               )}
 
               {gaps.length > 0 && (
-                <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                <section className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
                   <h3 className="text-sm font-bold text-orange-500 uppercase tracking-wider mb-4">
                     Gaps
                   </h3>
                   <ul className="space-y-2">
                     {gaps.map((item, i) => (
-                      <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                      <li key={i} className="text-sm text-gray-600 dark:text-gray-300 flex items-start gap-2">
                         <span className="text-orange-500 mt-0.5">-</span>
                         {item}
                       </li>
@@ -482,8 +484,8 @@ export default function SimpleMatcher() {
         </div>
 
         {/* Footer Note */}
-        <div className="mt-20 pt-12 border-t border-slate-100">
-          <p className="text-center text-xs text-slate-400 tracking-wide">
+        <div className="mt-20 pt-12 border-t border-slate-100 dark:border-gray-800">
+          <p className="text-center text-xs text-slate-400 dark:text-gray-500 tracking-wide">
             Analysis generated through natural language processing · The results
             are indicative and do not replace human evaluation
           </p>
