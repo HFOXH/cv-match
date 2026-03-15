@@ -1,14 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from services.cv_service import CVService
-from services.normalization_service import NormalizationService
+from services import CVService, normalization_service
 
 router = APIRouter()
 
-normalization_service = NormalizationService()
-
 
 @router.post("/api/v1/cv/upload")
-async def upload_cv(file: UploadFile = File(...)):
+def upload_cv(file: UploadFile = File(...)):
 
     try:
         cv_result = CVService.process_cv(file)

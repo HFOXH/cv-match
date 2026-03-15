@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel
-from services.job_description_service import JDService
+from services import job_description_service
 
 router = APIRouter()
-
-job_description_service = JDService()
 
 
 class JDRequest(BaseModel):
@@ -12,7 +10,7 @@ class JDRequest(BaseModel):
 
 
 @router.post("/api/v1/jd/preprocess")
-async def preprocess_job_description(body: JDRequest):
+def preprocess_job_description(body: JDRequest):
 
     try:
         result = job_description_service.process(body.text)

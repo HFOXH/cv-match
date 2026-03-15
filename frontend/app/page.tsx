@@ -33,6 +33,7 @@ export default function SimpleMatcher() {
   } | null>(null);
   const [strengths, setStrengths] = useState<string[]>([]);
   const [gaps, setGaps] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   const getBarColor = (value: number) => {
     if (value >= 70) return "bg-emerald-500";
@@ -51,6 +52,7 @@ export default function SimpleMatcher() {
   const handleMatch = async () => {
     if (!cvLoaded || !text.trim()) return;
     setLoading(true);
+    setError("");
 
     try {
       const formData = new FormData();
@@ -63,8 +65,9 @@ export default function SimpleMatcher() {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        console.error("Error:", err.detail || err);
+        const err = await response.json().catch(() => null);
+        setError(err?.detail || "An error occurred while analyzing. Please try again.");
+        setMatchScore(null);
         return;
       }
 
@@ -88,8 +91,9 @@ export default function SimpleMatcher() {
       setSkillDetails(result.skill_details || null);
       setStrengths(result.strengths || []);
       setGaps(result.gaps || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      setError("Could not connect to the server. Please make sure the backend is running.");
+      setMatchScore(null);
     } finally {
       setLoading(false);
     }
@@ -185,6 +189,7 @@ export default function SimpleMatcher() {
                 >
                   <input
                     type="file"
+                    accept=".pdf,.docx"
                     className="hidden"
                     onChange={handleCVUpload}
                   />
@@ -247,6 +252,12 @@ export default function SimpleMatcher() {
                 "Analyze Compatibility"
               )}
             </button>
+
+            {error && (
+              <div className="mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {error}
+              </div>
+            )}
           </div>
 
           {/* Análisis */}

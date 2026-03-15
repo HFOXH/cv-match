@@ -21,10 +21,11 @@ class TestCleanText:
         assert "hr@company.com" not in result
         assert "Contact" in result
 
-    def test_removes_non_ascii(self):
+    def test_normalizes_non_ascii(self):
         text = "Developer with experience in résumé building"
         result = TextCleaner.clean_text(text)
         assert "é" not in result
+        assert "resume" in result
 
     def test_normalizes_whitespace(self):
         text = "Python   developer  with   experience"

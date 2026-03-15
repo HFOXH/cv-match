@@ -18,7 +18,7 @@ class VectorStore:
 
     def __init__(self, db_path: str = K_DEFAULT_DB_PATH):
         self.db_path = db_path
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self._init_db()
 
     def _init_db(self):

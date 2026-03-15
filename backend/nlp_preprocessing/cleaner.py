@@ -1,11 +1,11 @@
 import re
 import logging
+import unicodedata
 
 logger = logging.getLogger(__name__)
 
 K_URL_PATTERN = r'https?://\S+|www\.\S+'
 K_EMAIL_PATTERN = r'\S+@\S+\.\S+'
-K_NON_ASCII_PATTERN = r'[^\x00-\x7F]+'
 K_MULTI_WHITESPACE_PATTERN = r'\s+'
 
 
@@ -19,7 +19,8 @@ class TextCleaner:
             return ""
         cleaned = re.sub(K_URL_PATTERN, '', text)
         cleaned = re.sub(K_EMAIL_PATTERN, '', cleaned)
-        cleaned = re.sub(K_NON_ASCII_PATTERN, ' ', cleaned)
+        cleaned = unicodedata.normalize('NFKD', cleaned)
+        cleaned = cleaned.encode('ascii', 'ignore').decode('ascii')
         cleaned = re.sub(K_MULTI_WHITESPACE_PATTERN, ' ', cleaned)
         return cleaned.strip()
 

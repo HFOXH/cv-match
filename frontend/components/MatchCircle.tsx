@@ -2,7 +2,7 @@ type MatchGaugeProps = {
   percentage: number;
 };
 
-export default function MatchGauge({ percentage }: MatchGaugeProps) {
+export default function MatchCircle({ percentage }: MatchGaugeProps) {
   const radius = 70;
   const strokeWidth = 12;
   const normalizedRadius = radius - strokeWidth / 2;

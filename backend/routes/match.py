@@ -1,19 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
-from services.cv_service import CVService
-from services.job_description_service import JDService
-from services.normalization_service import NormalizationService
-from services.matching_service import MatchingService
+from services import CVService, job_description_service, normalization_service, matching_service
 
 router = APIRouter()
 
-job_description_service = JDService()
-normalization_service = NormalizationService()
-matching_service = MatchingService()
-
 
 @router.post("/api/v1/match")
-async def match_cv_with_jd(
+def match_cv_with_jd(
     file: UploadFile = File(...),
     job_description: str = Form(...),
 ):

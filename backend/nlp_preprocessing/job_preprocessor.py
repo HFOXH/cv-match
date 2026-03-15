@@ -182,6 +182,7 @@ class JobDescriptionPreprocessor:
             "experience_requirements": None,
             "education_requirements": None,
             "key_phrases": [],
+            "summary": None,
         }
 
     @staticmethod
@@ -198,4 +199,5 @@ class JobDescriptionPreprocessor:
             "education_level": None,
             "experience_requirements": None,
             "education_requirements": None,
+            "summary": None,
         }

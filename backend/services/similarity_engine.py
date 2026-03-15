@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import re
 import logging
 from difflib import SequenceMatcher
 from typing import Dict, Any, List, Optional
@@ -48,10 +49,10 @@ K_WEIGHTS_FALLBACK = {
 
 K_SCORE_BANDS = [
     (90, 100, "Excellent Match", "Strong candidate — definitely apply", "green"),
-    (75, 89, "Good Match", "Good candidate — apply with confidence", "light-green"),
-    (60, 74, "Moderate Match", "Consider applying — highlight transferable skills", "yellow"),
-    (40, 59, "Weak Match", "Significant gaps — apply cautiously", "orange"),
-    (0, 39, "Poor Match", "Not recommended — major misalignment", "red"),
+    (75, 90, "Good Match", "Good candidate — apply with confidence", "light-green"),
+    (60, 75, "Moderate Match", "Consider applying — highlight transferable skills", "yellow"),
+    (40, 60, "Weak Match", "Significant gaps — apply cautiously", "orange"),
+    (0, 40, "Poor Match", "Not recommended — major misalignment", "red"),
 ]
 
 
@@ -119,8 +120,9 @@ class SimilarityEngine:
 
     @staticmethod
     def _fuzzy_match(skill_a: str, skill_b: str) -> bool:
-        """Check if two skills match using substring or string similarity."""
-        if skill_a in skill_b or skill_b in skill_a:
+        """Check if two skills match using word-boundary substring or string similarity."""
+        shorter, longer = (skill_a, skill_b) if len(skill_a) <= len(skill_b) else (skill_b, skill_a)
+        if len(shorter) >= 4 and re.search(r'(?:^|\b)' + re.escape(shorter) + r'(?:\b|$)', longer):
             return True
         return SequenceMatcher(None, skill_a, skill_b).ratio() >= 0.8
 
@@ -173,8 +175,10 @@ class SimilarityEngine:
     def get_score_band(percentage: float) -> dict:
         """Return rating, recommendation, and color for a given percentage."""
         for low, high, rating, recommendation, color in K_SCORE_BANDS:
-            if low <= percentage <= high:
+            if low <= percentage < high:
                 return {"rating": rating, "recommendation": recommendation, "color": color}
+        if percentage >= 100:
+            return {"rating": "Excellent Match", "recommendation": "Strong candidate — definitely apply", "color": "green"}
         return {"rating": "Poor Match", "recommendation": "Not recommended — major misalignment", "color": "red"}
 
     @staticmethod
@@ -230,7 +234,10 @@ class SimilarityEngine:
         updated_extra = sorted(set(skill_details["extra_skills"]) - newly_matched_cv)
         matched_count = len(updated_matched)
 
-        union_size = skill_details["cv_skills_count"] + skill_details["job_skills_count"] - matched_count
+        # Union size is fixed: total unique skills across both CV and JD.
+        # |CV ∪ JD| = |CV| + |JD| - |exact intersection|
+        # = total unique count = matched + missing + extra
+        union_size = matched_count + len(updated_missing) + len(updated_extra)
         score = matched_count / union_size if union_size > 0 else 0.0
 
         logger.info("Semantic matching found %d additional pairs", len(newly_matched_jd))

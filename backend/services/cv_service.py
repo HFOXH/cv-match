@@ -1,5 +1,5 @@
+import hashlib
 import io
-import uuid
 
 from cv_processor import CVProcessor
 from cv_processor.exceptions import ProcessingError
@@ -43,7 +43,7 @@ class CVService:
         result = CVProcessor.process_text(text, file_type=extension)
 
         return {
-            "cv_id": str(uuid.uuid4()),
+            "cv_id": hashlib.md5(text.encode()).hexdigest(),
             "raw_text": text,
             "parsed_data": result.get("parsed_data", {}),
             "parsing_method": result.get("parsing_method")

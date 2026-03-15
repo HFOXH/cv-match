@@ -66,10 +66,10 @@ class TestJaccardSimilarity:
 
     def test_fuzzy_substring_match(self):
         result = SimilarityEngine.calculate_jaccard(
-            ["vue", "wordpress", "ethical hacking"],
-            ["vue 3", "wordpress development", "ethical hacking and cybersecurity"],
+            ["wordpress", "ethical hacking"],
+            ["wordpress development", "ethical hacking course"],
         )
-        assert result["matched_count"] == 3
+        assert result["matched_count"] == 2
         assert result["missing_skills"] == []
 
     def test_fuzzy_similarity_match(self):
@@ -84,17 +84,15 @@ class TestJaccardSimilarity:
         result = SimilarityEngine.calculate_jaccard(
             ["java"], ["javascript"]
         )
-        # "java" is a substring of "javascript" but they are different skills
-        # substring match will trigger here — this is an accepted trade-off
-        # The semantic similarity metric compensates for any inaccuracy
+        assert result["matched_count"] == 0
+        assert result["missing_skills"] == ["javascript"]
 
     def test_fuzzy_with_exact_and_partial(self):
         result = SimilarityEngine.calculate_jaccard(
-            ["python", "vue", "docker"],
-            ["python", "vue 3", "kubernetes"],
+            ["python", "docker", "fastapi"],
+            ["python", "fastapi framework", "kubernetes"],
         )
         assert "python" in result["matched_skills"]
-        assert "vue 3" in result["matched_skills"]
         assert "kubernetes" in result["missing_skills"]
         assert result["matched_count"] == 2
 
@@ -157,6 +155,14 @@ class TestScoreBands:
     def test_boundary_zero(self):
         band = SimilarityEngine.get_score_band(0.0)
         assert band["rating"] == "Poor Match"
+
+    def test_float_between_bands(self):
+        band = SimilarityEngine.get_score_band(89.5)
+        assert band["rating"] == "Good Match"
+
+    def test_exact_hundred(self):
+        band = SimilarityEngine.get_score_band(100.0)
+        assert band["rating"] == "Excellent Match"
 
 
 def _make_vectors(cv_skills, jd_skills, embedding_val=0.5):
