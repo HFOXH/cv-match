@@ -2,6 +2,8 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from services import CVService, job_description_service, normalization_service, matching_service
 
+import time
+
 router = APIRouter()
 
 
@@ -11,28 +13,43 @@ def match_cv_with_jd(
     job_description: str = Form(...),
 ):
     try:
+        start_total = time.perf_counter()
         # Step 1: Process CV (extract + parse)
+        t0 = time.perf_counter()
         cv_result = CVService.process_cv(file)
+        cv_processing_ms = (time.perf_counter() - t0) * 1000
         parsing_method = cv_result.get("parsing_method", "openai")
 
         # Step 2: Normalize CV data
+        t0 = time.perf_counter()
         normalized_cv = normalization_service.normalize(cv_result["parsed_data"])
+        cv_normalization_ms = (time.perf_counter() - t0) * 1000
 
         # Step 3: Preprocess job description
+        t0 = time.perf_counter()
         jd_result = job_description_service.process(job_description)
+        jd_preprocessing_ms = (time.perf_counter() - t0) * 1000
 
         # Step 4: Encode both using HybridEncoder (via MatchingService)
+        t0 = time.perf_counter()
         cv_vectors = matching_service.encode_cv(
             cv_id=cv_result["cv_id"],
             normalized_cv=normalized_cv,
             raw_text=cv_result.get("raw_text", ""),
             parsing_method=parsing_method,
         )
+        cv_encoding_ms = (time.perf_counter() - t0) * 1000
 
+        t0 = time.perf_counter()
         jd_vectors = matching_service.encode_jd(jd_result)
+        jd_encoding_ms = (time.perf_counter() - t0) * 1000
 
         # Step 5: Compute match
+        t0 = time.perf_counter()
         match_result = matching_service.compute_match(cv_vectors, jd_vectors)
+        scoring_ms = (time.perf_counter() - t0) * 1000
+
+        total_ms = (time.perf_counter() - start_total) * 1000
 
         return {
             # Existing fields (backward compat)
@@ -60,6 +77,16 @@ def match_cv_with_jd(
             "skill_details": match_result.get("skill_details"),
             "strengths": match_result.get("strengths", []),
             "gaps": match_result.get("gaps", []),
+
+            "timing": {
+                "cv_processing_ms": round(cv_processing_ms),
+                "cv_normalization_ms": round(cv_normalization_ms),
+                "jd_preprocessing_ms": round(jd_preprocessing_ms),
+                "cv_encoding_ms": round(cv_encoding_ms),
+                "jd_encoding_ms": round(jd_encoding_ms),
+                "scoring_ms": round(scoring_ms),
+                "total_ms": round(total_ms),
+            }
         }
 
     except Exception as e:
