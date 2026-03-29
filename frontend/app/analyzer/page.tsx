@@ -3,6 +3,7 @@
 import { useState, ChangeEvent } from "react";
 import MatchCircle from "@/components/MatchCircle";
 import ThemeToggle from "@/components/ThemeToggle";
+import Navbar from "@/components/Navbar";
 
 export default function SimpleMatcher() {
   const [text, setText] = useState("");
@@ -140,28 +141,11 @@ export default function SimpleMatcher() {
         }
       `}</style>
 
-      {/* Minimal Header */}
-      <nav className="border-b border-slate-100 dark:border-gray-800 mb-4">
-        <div className="max-w-6xl mx-auto px-8 py-6 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-8 bg-slate-950 dark:bg-white rounded-full" />
-            <span className="text-lg font-bold tracking-tight">CVMatch</span>
-          </div>
-          <div className="flex items-center gap-6">
-            <button className="text-sm text-slate-500 dark:text-gray-400 hover:text-slate-950 dark:hover:text-white transition-colors font-medium cursor-pointer">
-              Documentation
-            </button>
-            <button className="text-sm text-slate-500 dark:text-gray-400 hover:text-slate-950 dark:hover:text-white transition-colors font-medium cursor-pointer">
-              Support
-            </button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className="max-w-4xl mx-auto px-6 pb-24">
         {/* Hero */}
-        <header className="text-center mb-16">
+        <header className="text-center my-16">
           <h1 className="text-5xl font-extrabold tracking-tight mb-4 text-gray-900 dark:text-white">
             Perfect Match
           </h1>
