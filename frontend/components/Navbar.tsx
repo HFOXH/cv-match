@@ -13,10 +13,10 @@ export default function Navbar() {
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="2" y="2" width="5" height="5" rx="1" fill="white"/>
-              <rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.5"/>
-              <rect x="2" y="9" width="5" height="5" rx="1" fill="white" opacity="0.5"/>
-              <rect x="9" y="9" width="5" height="5" rx="1" fill="white"/>
+              <rect x="2" y="2" width="5" height="5" rx="1" fill="white" />
+              <rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.5" />
+              <rect x="2" y="9" width="5" height="5" rx="1" fill="white" opacity="0.5" />
+              <rect x="9" y="9" width="5" height="5" rx="1" fill="white" />
             </svg>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">CVMatch</span>
@@ -38,16 +38,31 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <ThemeToggle />
           {!isSignedIn ? (
-            <SignInButton>
-              <button className="cursor-pointer btn-primary text-sm px-5 py-2.5 rounded-xl">
-                Get Started
-              </button>
-            </SignInButton>
+            <>
+              <SignInButton>
+                <button className="cursor-pointer btn-primary text-sm px-5 py-2.5 rounded-xl">
+                  Get Started
+                </button>
+              </SignInButton>
+
+              <ThemeToggle />
+            </>
           ) : (
-            <UserButton />
+            <>
+              <a href="/analyzer">
+                <button className="cursor-pointer btn-primary text-sm px-5 py-2.5 rounded-xl">
+                  Analyze
+                </button>
+              </a>
+
+              <ThemeToggle />
+
+              <UserButton />
+            </>
           )}
+
+
         </div>
       </div>
     </nav>

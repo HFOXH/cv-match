@@ -19,9 +19,15 @@ export default function Footer() {
                     Analysis generated through natural language processing · Results are indicative and do not replace human evaluation.
                 </p>
                 <div className="flex gap-6">
-                    {["Privacy", "Terms", "Support"].map(link => (
-                        <a key={link} href="#" className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{link}</a>
-                    ))}
+                    <a href="/privacy" className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        Privacy
+                    </a>
+                    <a href="/terms" className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        Terms
+                    </a>
+                    <a href="/support" className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        Support
+                    </a>
                 </div>
             </div>
         </footer>
