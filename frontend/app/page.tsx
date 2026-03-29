@@ -506,6 +506,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── FEATURE COMPARISON ──────────────────────────────────────────────── */}
+
       {/* ── CTA BANNER ──────────────────────────────────────────────────────── */}
       <section id="upload" className="py-20 px-6">
         <div className="max-w-3xl mx-auto bg-blue-600 dark:bg-blue-700 rounded-3xl p-12 text-center text-white relative overflow-hidden transition-colors">
