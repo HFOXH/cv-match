@@ -19,7 +19,6 @@ export default function SimpleMatcher() {
   const [keyPhrases, setKeyPhrases] = useState<string[]>([]);
   const [overallSimilarity, setOverallSimilarity] = useState<number | null>(null);
   const [sectionSimilarities, setSectionSimilarities] = useState<Record<string, number>>({});
-  const [tfidfSimilarity, setTfidfSimilarity] = useState<number | null>(null);
   const [isFallback, setIsFallback] = useState(false);
   const [matchRating, setMatchRating] = useState("");
   const [recommendation, setRecommendation] = useState("");
@@ -84,7 +83,6 @@ export default function SimpleMatcher() {
       setKeyPhrases(result.key_phrases || []);
       setOverallSimilarity(result.overall_similarity);
       setSectionSimilarities(result.section_similarities || {});
-      setTfidfSimilarity(result.tfidf_similarity);
       setIsFallback(result.is_fallback || false);
       setMatchRating(result.match_rating || "");
       setRecommendation(result.recommendation || "");
@@ -399,19 +397,6 @@ export default function SimpleMatcher() {
                   </>
                 )}
 
-                {/* Keyword Match (TF-IDF) */}
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600 dark:text-gray-300 font-medium">Keyword Match</span>
-                    <span className="text-gray-500 dark:text-gray-400">{tfidfSimilarity ?? 0}%</span>
-                  </div>
-                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
-                    <div
-                      className={`h-2.5 rounded-full transition-all ${getBarColor(tfidfSimilarity ?? 0)}`}
-                      style={{ width: `${Math.min(tfidfSimilarity ?? 0, 100)}%` }}
-                    />
-                  </div>
-                </div>
               </div>
             </section>
           )}

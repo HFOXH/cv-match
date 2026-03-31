@@ -24,16 +24,19 @@ Return ONLY valid JSON with these fields:
     "preferred_skills": ["skills marked as preferred/nice-to-have/bonus"],
     "experience_years": "experience requirement as string (e.g., '3-5 years') or null",
     "education_level": "highest education mentioned (PhD/Master's/Bachelor's) or null",
-    "experience_requirements": "Factual summary of experience needed: years of experience, types of roles, domains, and key responsibilities. Use neutral language (e.g., '3+ years of full stack development experience with modern frameworks. Background in web application development and API design.'). If none found, use null.",
-    "education_requirements": "Factual summary of education needed: degree levels, fields of study, certifications. Use neutral language (e.g., 'Bachelor's degree in Computer Science or related field. Master's preferred.'). If none found, use null.",
-    "key_phrases": ["important multi-word phrases like 'machine learning engineer', 'distributed systems'"],
+    "experience_requirements": "Factual summary of experience needed: years of experience, types of roles, domains, and key responsibilities. Use neutral language. Examples: '1-2 years of retail or customer service experience preferred.' or '3+ years of full stack development experience.' If none found, use null.",
+    "education_requirements": "Factual summary of education needed: degree levels, fields of study, certifications. Use neutral language. Examples: 'High school diploma or equivalent.' or 'Bachelor's degree in Computer Science or related field.' If none found, use null.",
+    "key_phrases": ["important multi-word phrases that capture the role essence, e.g., 'retail store associate', 'customer service', 'food safety compliance', 'project management'"],
     "summary": "Concise summary of the job description, max 250 words"
 }}
 
 Rules:
-- Normalize skill names (e.g., 'JS' -> 'JavaScript', 'ML' -> 'Machine Learning')
+- Normalize skill names from ANY industry (e.g., 'JS' -> 'JavaScript', 'POS' -> 'point of sale', 'CPR' -> 'CPR certification')
 - If a skill is not clearly required or preferred, put it in required_skills
-- Include both technical skills (Python, AWS) and soft skills (communication, leadership)
+- Include both hard skills (tools, certifications, technical abilities) and soft skills (communication, leadership, teamwork, multitasking)
+- This applies to ALL industries: retail, healthcare, trades, hospitality, IT, education, manufacturing, etc.
+- Do NOT include physical requirements as skills (e.g., "ability to stand for extended periods", "ability to lift 50 lbs", "ability to work in cold environments", "physical stamina"). These are working conditions, not skills.
+- Do NOT include generic availability requirements as skills (e.g., "flexible schedule", "available weekends")
 - Key phrases should be bigrams/trigrams that capture the role essence
 - Summary should be clear, professional, and no more than 250 words
 

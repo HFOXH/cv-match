@@ -1,8 +1,13 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import cv, job_description, match
+from middleware.request_logger import RequestLoggingMiddleware
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="CVMatch API")
+app.add_middleware(RequestLoggingMiddleware)
 
 origins = [ "*"]
 
