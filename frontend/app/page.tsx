@@ -40,9 +40,16 @@ export default function SimpleMatcher() {
     return "bg-red-500";
   };
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
   const handleCVUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        setError("File too large. Maximum size is 5MB.");
+        return;
+      }
+      setError("");
       setCvFile(file);
       setCvLoaded(true);
     }

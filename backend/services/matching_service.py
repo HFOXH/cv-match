@@ -65,10 +65,11 @@ class MatchingService:
         report["overall_similarity"] = round(raw.get("sbert_overall", 0) * 100, 2)
         report["section_similarities"] = {}
         if not is_fallback:
+            breakdown = report.get("breakdown", {})
             report["section_similarities"] = {
-                "skills_semantic": round(raw.get("skills_semantic", 0) * 100, 2),
-                "experience": round(raw.get("experience_match", 0) * 100, 2),
-                "education": round(raw.get("education_match", 0) * 100, 2),
+                "skills_semantic": breakdown.get("skills", {}).get("score", round(raw.get("skills_semantic", 0) * 100, 2)),
+                "experience": breakdown.get("experience", {}).get("score", round(raw.get("experience_match", 0) * 100, 2)),
+                "education": breakdown.get("education", {}).get("score", round(raw.get("education_match", 0) * 100, 2)),
             }
         report["cv_skills"] = cv_vectors.get("skills_list", [])
         report["jd_skills"] = jd_vectors.get("skills_list", [])

@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 from openai import OpenAI
 from ..exceptions import ParsingError
 from dotenv import load_dotenv
+from services.openai_retry import retry_openai_call
 
 load_dotenv()
 
@@ -94,7 +95,8 @@ class OpenAICVParser:
         prompt = K_USER_PROMPT_TEMPLATE.format(cv_text=raw_text[:K_MAX_CV_TEXT_LENGTH])
 
         try:
-            response = self.client.chat.completions.create(
+            response = retry_openai_call(
+                self.client.chat.completions.create,
                 model=self.model,
                 messages=[
                     {"role": "system", "content": K_SYSTEM_PROMPT},

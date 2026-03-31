@@ -10,6 +10,7 @@ import numpy as np
 from openai import OpenAI
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
+from services.openai_retry import retry_openai_call
 
 load_dotenv()
 
@@ -120,11 +121,19 @@ class SimilarityEngine:
             jd_vectors.get("education_level"),
         )
 
+        # Boost experience score if job titles/industry overlap
+        experience_sim = section_sims.get("experience", 0.0)
+        experience_score = self._experience_score(
+            experience_sim,
+            cv_vectors.get("job_titles", []),
+            jd_vectors.get("job_title"),
+        )
+
         raw_scores = {
             "skills_jaccard": skill_details["score"],
             "skills_semantic": section_sims.get("skills_semantic", 0.0),
             "sbert_overall": overall_sbert,
-            "experience_match": section_sims.get("experience", 0.0),
+            "experience_match": experience_score,
             "education_match": education_score,
         }
 
@@ -161,6 +170,33 @@ class SimilarityEngine:
             return max(semantic_sim, 0.5)
         else:
             return semantic_sim
+
+    def _experience_score(self, semantic_sim: float, cv_titles: list = None, jd_title: str = None) -> float:
+        """Boost experience score when job titles or roles directly overlap."""
+        if not cv_titles or not jd_title:
+            return semantic_sim
+
+        jd_lower = jd_title.lower().strip()
+        jd_words = set(jd_lower.split())
+
+        best_overlap = 0.0
+        for title in cv_titles:
+            title_lower = title.lower().strip()
+            # Check exact substring match
+            if title_lower in jd_lower or jd_lower in title_lower:
+                return max(semantic_sim, 0.85)
+            # Check word overlap ratio
+            title_words = set(title_lower.split())
+            if title_words and jd_words:
+                overlap = len(title_words & jd_words) / len(title_words | jd_words)
+                best_overlap = max(best_overlap, overlap)
+
+        if best_overlap >= 0.5:
+            return max(semantic_sim, 0.75)
+        elif best_overlap >= 0.25:
+            return max(semantic_sim, 0.6)
+
+        return semantic_sim
 
     def _parse_education_level(self, edu_text: str) -> int:
         """Extract education level number from text. Checks highest levels first."""
@@ -312,7 +348,8 @@ class SimilarityEngine:
         )
 
         try:
-            response = self.openai_client.chat.completions.create(
+            response = retry_openai_call(
+                self.openai_client.chat.completions.create,
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Return only valid JSON."},

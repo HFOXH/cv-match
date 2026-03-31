@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from .cleaner import TextCleaner
 from .tokenizer import load_spacy_model, tokenize, lemmatize
+from services.openai_retry import retry_openai_call
 
 load_dotenv()
 
@@ -152,7 +153,8 @@ class JobDescriptionPreprocessor:
         prompt = K_EXTRACTION_USER_PROMPT.format(jd_text=text)
 
         try:
-            response = self.client.chat.completions.create(
+            response = retry_openai_call(
+                self.client.chat.completions.create,
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": K_EXTRACTION_SYSTEM_PROMPT},

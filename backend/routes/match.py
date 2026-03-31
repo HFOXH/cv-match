@@ -12,6 +12,15 @@ def match_cv_with_jd(
     file: UploadFile = File(...),
     job_description: str = Form(...),
 ):
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+    # Validate file size
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 5MB.")
+
     try:
         start_total = time.perf_counter()
         # Step 1: Process CV (extract + parse)
@@ -47,6 +56,19 @@ def match_cv_with_jd(
         # Pass education levels for smart comparison
         cv_vectors["education_level"] = cv_result["parsed_data"].get("education_level")
         jd_vectors["education_level"] = jd_result.get("education_level")
+
+        # Pass job titles for experience matching
+        cv_experience = cv_result["parsed_data"].get("experience", [])
+        cv_vectors["job_titles"] = [
+            e.get("job_title", "") for e in cv_experience
+            if isinstance(e, dict) and e.get("job_title")
+        ]
+        # Extract job title from JD (first line or key phrase)
+        jd_title = None
+        jd_phrases = jd_result.get("key_phrases", [])
+        if jd_phrases:
+            jd_title = jd_phrases[0]
+        jd_vectors["job_title"] = jd_title
 
         # Step 5: Compute match
         t0 = time.perf_counter()

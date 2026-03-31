@@ -3,6 +3,7 @@ import logging
 from typing import List, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
+from services.openai_retry import retry_openai_call
 
 load_dotenv()
 
@@ -48,7 +49,8 @@ class OpenAIEncoder:
 
         try:
             truncated = text[:K_MAX_INPUT_LENGTH]
-            response = self.client.embeddings.create(
+            response = retry_openai_call(
+                self.client.embeddings.create,
                 model=self.model,
                 input=truncated,
             )
@@ -79,7 +81,8 @@ class OpenAIEncoder:
             return [None] * len(texts)
 
         try:
-            response = self.client.embeddings.create(
+            response = retry_openai_call(
+                self.client.embeddings.create,
                 model=self.model,
                 input=valid_texts,
             )

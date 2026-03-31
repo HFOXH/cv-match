@@ -246,7 +246,110 @@ Testing with a retail CV (Store Associate, 2+ years at No Frills) against a Reta
 
 ---
 
+## Update 13: Persistent File Logging
+
+**File:** `backend/api/main.py`
+
+**Problem:** Logs only printed to the terminal. Once the server was stopped, all logs were lost — no persistent history for debugging or auditing.
+
+**Fix:** Added dual logging — both terminal and file:
+- Logs written to `backend/logs/app.log`
+- Uses `RotatingFileHandler`: rotates at 5MB, keeps last 5 backup files
+- Format: `2026-03-31 14:30:00,123 | INFO | cvmatch.requests | POST /api/v1/match | 200 | 3456ms | 127.0.0.1`
+- `logs/` directory auto-created on startup
+- `.gitkeep` preserves the directory in git, `*.log` already in `.gitignore`
+
+---
+
+## Update 14: Smart Experience Scoring
+
+**Files:**
+- `backend/services/similarity_engine.py`
+- `backend/routes/match.py`
+
+**Problem:** A "Store Associate" applying for a "Retail Store Associate" role only got ~47% on experience because pure embedding similarity doesn't recognize direct role matches.
+
+**Fix:** Added `_experience_score()` method with job title comparison:
+- Exact or substring title match (e.g., "Store Associate" in "Retail Store Associate") → score boosted to at least 85%
+- 50%+ word overlap between titles → boosted to at least 75%
+- 25%+ word overlap → boosted to at least 60%
+- No match → falls back to semantic similarity
+- CV job titles extracted from parsed experience data, JD title from first key phrase
+
+---
+
+## Update 15: Frontend Shows Actual Calculated Scores
+
+**File:** `backend/services/matching_service.py`
+
+**Problem:** Frontend displayed raw embedding similarities (e.g., Education Alignment 31.86%) but the actual score used in calculation was 80% (after the smart education boost). This mismatch confused users.
+
+**Fix:** `section_similarities` in the API response now reads from the `breakdown` dict (which contains the boosted scores) instead of raw embedding values. What users see now matches what's actually being scored.
+
+---
+
+## Update 16: File Size Validation
+
+**Files:**
+- `frontend/app/page.tsx`
+- `backend/routes/match.py`
+
+**Problem:** Frontend displayed "up to 5MB" but nothing enforced the limit.
+
+**Fix:**
+- **Frontend:** Validates file size on upload, shows error if > 5MB
+- **Backend:** Checks file size before processing, returns HTTP 413 if exceeded
+
+---
+
+## Update 17: OpenAI Rate Limit Handling
+
+**Files:**
+- `backend/services/openai_retry.py` (new)
+- `backend/embedding/openai_encoder.py`
+- `backend/cv_processor/parsers/openai_parser.py`
+- `backend/nlp_preprocessing/cv_normalizer.py`
+- `backend/nlp_preprocessing/job_preprocessor.py`
+- `backend/services/similarity_engine.py`
+
+**Problem:** All OpenAI API calls had no retry logic. If a rate limit or transient error occurred, the request simply failed.
+
+**Fix:** Created `retry_openai_call()` utility with:
+- Up to 3 retries with exponential backoff (1s, 2s, 4s)
+- Handles `RateLimitError`, `APITimeoutError`, `APIConnectionError`
+- Logs warnings on retry, errors on final failure
+- Applied to all 5 modules that make OpenAI calls
+
+---
+
+## Update 18: CORS Configuration
+
+**File:** `backend/api/main.py`
+
+**Problem:** CORS was set to `"*"` (allow all origins). Fine for development but a security risk in production.
+
+**Fix:**
+- Default CORS origin is now `http://localhost:3000` (the frontend dev server)
+- Configurable via `ALLOWED_ORIGINS` environment variable (comma-separated)
+- Methods restricted to `GET` and `POST` only
+
+---
+
+## Update 19: Updated Tests
+
+**File:** `backend/tests/test_similarity_engine.py`
+
+**Changes:**
+- Updated Jaccard test to verify JD-denominator scoring (3/5 not 3/7)
+- Added test that extra CV skills don't penalize the score
+- Updated calibration tests for new sigmoid parameters
+- Added `TestEducationScoring` class (8 tests): exceeds/meets/below requirement, fallbacks, keyword parsing
+- Added `TestExperienceScoring` class (6 tests): exact/substring/partial/no match, fallbacks
+- Updated breakdown test to verify TF-IDF is NOT in breakdown
+- **55 tests total, all passing**
+
+---
+
 ## Known Remaining Issues
 
-1. **Experience scoring could be smarter** — direct industry/role match could boost the score beyond just embedding similarity (e.g., "Store Associate" applying for "Store Associate" should get a bonus).
-2. **Vector cache must be cleared** after prompt changes — delete `backend/vectors.db` when restarting after updates.
+1. **Vector cache must be cleared** after prompt changes — delete `backend/vectors.db` when restarting after updates.
