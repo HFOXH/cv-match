@@ -6,7 +6,6 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 from .cleaner import TextCleaner
-from .tokenizer import load_spacy_model, tokenize, lemmatize
 from services.openai_retry import retry_openai_call
 
 load_dotenv()
@@ -61,7 +60,6 @@ class JobDescriptionPreprocessor:
     # * return: None
     # */
     def __init__(self, openai_api_key: Optional[str] = None):
-        self.nlp = load_spacy_model()
 
         api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         if api_key:
@@ -87,8 +85,6 @@ class JobDescriptionPreprocessor:
 
         # Traditional NLP (mechanical processing)
         cleaned = self.clean_text(text)
-        tokens = self.tokenize(cleaned)
-        lemmas = self.lemmatize(tokens)
 
         # OpenAI API (intelligent extraction)
         openai_extracted = self.openai_extract(cleaned)
@@ -96,8 +92,6 @@ class JobDescriptionPreprocessor:
         return {
             "original_text": text,
             "cleaned_text": cleaned,
-            "tokens": tokens,
-            "lemmas": lemmas,
             "key_phrases": openai_extracted.get("key_phrases", []),
             "required_skills": TextCleaner.normalize_skills(openai_extracted.get("required_skills", [])),
             "preferred_skills": TextCleaner.normalize_skills(openai_extracted.get("preferred_skills", [])),
@@ -116,26 +110,6 @@ class JobDescriptionPreprocessor:
     # */
     def clean_text(self, text: str) -> str:
         return TextCleaner.clean_text(text)
-
-    # /*
-    # * function name: tokenize()
-    # * Description: Tokenize text using spaCy and remove spaCy's built-in stop words.
-    # * Parameter: text : str : Cleaned text to tokenize.
-    # * return: List[str] : List of tokens with stop words removed.
-    # */
-    def tokenize(self, text: str) -> List[str]:
-        raw_tokens = tokenize(self.nlp, text)
-        stop_words = self.nlp.Defaults.stop_words
-        return [t for t in raw_tokens if t.lower() not in stop_words]
-
-    # /*
-    # * function name: lemmatize()
-    # * Description: Lemmatize tokens using spaCy.
-    # * Parameter: tokens : list : List of token strings.
-    # * return: List[str] : List of lemmatized strings.
-    # */
-    def lemmatize(self, tokens: list) -> List[str]:
-        return lemmatize(self.nlp, tokens)
 
     # /*
     # * function name: openai_extract()
