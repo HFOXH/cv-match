@@ -38,17 +38,18 @@ class MatchingService:
         """
         is_fallback = cv_vectors.get("_fallback", False)
 
-        # Compute TF-IDF similarity (HybridEncoder owns this)
-        tfidf_result = self.hybrid_encoder.compute_tfidf_vectors(
-            cv_vectors.get("raw_text", ""),
-            jd_vectors.get("cleaned_text", ""),
-        )
+        # Compute TF-IDF similarity only for fallback mode
         tfidf_sim = 0.0
-        if tfidf_result["cv_vector"] is not None and tfidf_result["jd_vector"] is not None:
-            tfidf_sim = self._cosine_sim(
-                tfidf_result["cv_vector"].toarray().flatten(),
-                tfidf_result["jd_vector"].toarray().flatten(),
+        if is_fallback:
+            tfidf_result = self.hybrid_encoder.compute_tfidf_vectors(
+                cv_vectors.get("raw_text", ""),
+                jd_vectors.get("cleaned_text", ""),
             )
+            if tfidf_result["cv_vector"] is not None and tfidf_result["jd_vector"] is not None:
+                tfidf_sim = self._cosine_sim(
+                    tfidf_result["cv_vector"].toarray().flatten(),
+                    tfidf_result["jd_vector"].toarray().flatten(),
+                )
 
         # Delegate to SimilarityEngine
         report = self.similarity_engine.calculate_match(
@@ -64,12 +65,12 @@ class MatchingService:
         report["overall_similarity"] = round(raw.get("sbert_overall", 0) * 100, 2)
         report["section_similarities"] = {}
         if not is_fallback:
+            breakdown = report.get("breakdown", {})
             report["section_similarities"] = {
-                "skills_semantic": round(raw.get("skills_semantic", 0) * 100, 2),
-                "experience": round(raw.get("experience_match", 0) * 100, 2),
-                "education": round(raw.get("education_match", 0) * 100, 2),
+                "skills_semantic": breakdown.get("skills", {}).get("score", round(raw.get("skills_semantic", 0) * 100, 2)),
+                "experience": breakdown.get("experience", {}).get("score", round(raw.get("experience_match", 0) * 100, 2)),
+                "education": breakdown.get("education", {}).get("score", round(raw.get("education_match", 0) * 100, 2)),
             }
-        report["tfidf_similarity"] = round(tfidf_sim * 100, 2)
         report["cv_skills"] = cv_vectors.get("skills_list", [])
         report["jd_skills"] = jd_vectors.get("skills_list", [])
 

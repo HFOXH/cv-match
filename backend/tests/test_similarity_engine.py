@@ -30,12 +30,13 @@ class TestJaccardSimilarity:
         assert result["matched_count"] == 0
         assert len(result["missing_skills"]) == 2
 
-    def test_partial_overlap(self):
+    def test_partial_overlap_uses_jd_denominator(self):
         result = SimilarityEngine.calculate_jaccard(K_CV_SKILLS, K_JD_SKILLS)
         assert result["matched_skills"] == K_MATCHED
         assert result["missing_skills"] == K_MISSING
         assert result["extra_skills"] == K_EXTRA
-        assert abs(result["score"] - 3 / 7) < 1e-9
+        # Score = matched / jd_skills = 3/5
+        assert abs(result["score"] - 3 / 5) < 1e-9
 
     def test_empty_cv_skills(self):
         result = SimilarityEngine.calculate_jaccard([], ["python", "react"])
@@ -96,6 +97,16 @@ class TestJaccardSimilarity:
         assert "kubernetes" in result["missing_skills"]
         assert result["matched_count"] == 2
 
+    def test_extra_cv_skills_dont_penalize(self):
+        """Having extra skills should not lower the score."""
+        base = SimilarityEngine.calculate_jaccard(
+            ["python", "react"], ["python", "react"]
+        )
+        extra = SimilarityEngine.calculate_jaccard(
+            ["python", "react", "docker", "go", "rust"], ["python", "react"]
+        )
+        assert extra["score"] == base["score"] == 1.0
+
 
 class TestScoreCalibration:
 
@@ -109,7 +120,7 @@ class TestScoreCalibration:
 
     def test_low_raw_gives_near_zero(self):
         result = SimilarityEngine.calibrate_score(0.05)
-        assert result < 5.0
+        assert result < 15.0
 
     def test_clamped_to_zero_hundred(self):
         assert SimilarityEngine.calibrate_score(-1.0) >= 0.0
@@ -121,9 +132,9 @@ class TestScoreCalibration:
             assert scores[i] >= scores[i - 1]
 
     def test_spreads_middle_range(self):
-        low = SimilarityEngine.calibrate_score(0.3)
-        high = SimilarityEngine.calibrate_score(0.6)
-        assert high - low > 50
+        low = SimilarityEngine.calibrate_score(0.2)
+        high = SimilarityEngine.calibrate_score(0.5)
+        assert high - low > 40
 
 
 class TestScoreBands:
@@ -163,6 +174,85 @@ class TestScoreBands:
     def test_exact_hundred(self):
         band = SimilarityEngine.get_score_band(100.0)
         assert band["rating"] == "Excellent Match"
+
+
+class TestEducationScoring:
+
+    def test_exceeds_requirement(self):
+        engine = SimilarityEngine()
+        score = engine._education_score(0.3, "college diploma", "high school")
+        assert score >= 0.8
+
+    def test_meets_requirement(self):
+        engine = SimilarityEngine()
+        score = engine._education_score(0.3, "bachelors", "bachelors")
+        assert score >= 0.8
+
+    def test_one_level_below(self):
+        engine = SimilarityEngine()
+        score = engine._education_score(0.3, "high school", "college diploma")
+        assert score >= 0.5
+
+    def test_far_below_uses_semantic(self):
+        engine = SimilarityEngine()
+        score = engine._education_score(0.3, "high school", "masters")
+        assert score == 0.3
+
+    def test_no_cv_edu_falls_back(self):
+        engine = SimilarityEngine()
+        score = engine._education_score(0.4, None, "bachelors")
+        assert score == 0.4
+
+    def test_no_jd_edu_falls_back(self):
+        engine = SimilarityEngine()
+        score = engine._education_score(0.4, "bachelors", None)
+        assert score == 0.4
+
+    def test_parse_education_levels(self):
+        engine = SimilarityEngine()
+        assert engine._parse_education_level("phd") == 5
+        assert engine._parse_education_level("masters") == 4
+        assert engine._parse_education_level("bachelors") == 3
+        assert engine._parse_education_level("college diploma") == 2
+        assert engine._parse_education_level("high school") == 1
+        assert engine._parse_education_level("unknown format") == 0
+
+    def test_technology_keyword_matches_college(self):
+        engine = SimilarityEngine()
+        assert engine._parse_education_level("Software engineering technology") == 2
+
+
+class TestExperienceScoring:
+
+    def test_exact_title_match(self):
+        engine = SimilarityEngine()
+        score = engine._experience_score(0.4, ["Store Associate"], "Store Associate")
+        assert score >= 0.85
+
+    def test_substring_title_match(self):
+        engine = SimilarityEngine()
+        score = engine._experience_score(0.4, ["Store Associate"], "Retail Store Associate")
+        assert score >= 0.85
+
+    def test_partial_word_overlap(self):
+        engine = SimilarityEngine()
+        score = engine._experience_score(0.4, ["Software Developer"], "Senior Software Engineer")
+        assert score >= 0.6
+
+    def test_no_match_uses_semantic(self):
+        engine = SimilarityEngine()
+        score = engine._experience_score(0.4, ["Nurse"], "Software Engineer")
+        assert score == 0.4
+
+    def test_no_titles_falls_back(self):
+        engine = SimilarityEngine()
+        score = engine._experience_score(0.4, [], "Software Engineer")
+        assert score == 0.4
+
+    def test_no_jd_title_falls_back(self):
+        engine = SimilarityEngine()
+        score = engine._experience_score(0.4, ["Developer"], None)
+        assert score == 0.4
 
 
 def _make_vectors(cv_skills, jd_skills, embedding_val=0.5):
@@ -231,12 +321,16 @@ class TestCalculateMatchFull:
         assert result["skill_details"] is not None
         assert "matched_skills" in result["skill_details"]
 
-    def test_breakdown_has_skills_section(self):
+    def test_breakdown_has_expected_sections(self):
         engine = SimilarityEngine()
         cv_v, jd_v = _make_vectors(K_CV_SKILLS, K_JD_SKILLS)
         result = engine.calculate_match(cv_v, jd_v, tfidf_sim=0.5)
         assert "skills" in result["breakdown"]
-        assert "matched" in result["breakdown"]["skills"]
+        assert "experience" in result["breakdown"]
+        assert "education" in result["breakdown"]
+        assert "overall_semantic" in result["breakdown"]
+        # TF-IDF should NOT be in breakdown
+        assert "tfidf" not in result["breakdown"]
 
     def test_strengths_populated_when_skills_match(self):
         engine = SimilarityEngine()

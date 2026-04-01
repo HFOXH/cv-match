@@ -2,6 +2,8 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from services import CVService, job_description_service, normalization_service, matching_service
 
+import time
+
 router = APIRouter()
 
 
@@ -10,29 +12,70 @@ def match_cv_with_jd(
     file: UploadFile = File(...),
     job_description: str = Form(...),
 ):
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+    # Validate file size
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 5MB.")
+
     try:
+        start_total = time.perf_counter()
         # Step 1: Process CV (extract + parse)
+        t0 = time.perf_counter()
         cv_result = CVService.process_cv(file)
+        cv_processing_ms = (time.perf_counter() - t0) * 1000
         parsing_method = cv_result.get("parsing_method", "openai")
 
         # Step 2: Normalize CV data
+        t0 = time.perf_counter()
         normalized_cv = normalization_service.normalize(cv_result["parsed_data"])
+        cv_normalization_ms = (time.perf_counter() - t0) * 1000
 
         # Step 3: Preprocess job description
+        t0 = time.perf_counter()
         jd_result = job_description_service.process(job_description)
+        jd_preprocessing_ms = (time.perf_counter() - t0) * 1000
 
         # Step 4: Encode both using HybridEncoder (via MatchingService)
+        t0 = time.perf_counter()
         cv_vectors = matching_service.encode_cv(
             cv_id=cv_result["cv_id"],
             normalized_cv=normalized_cv,
             raw_text=cv_result.get("raw_text", ""),
             parsing_method=parsing_method,
         )
+        cv_encoding_ms = (time.perf_counter() - t0) * 1000
 
+        t0 = time.perf_counter()
         jd_vectors = matching_service.encode_jd(jd_result)
+        jd_encoding_ms = (time.perf_counter() - t0) * 1000
+
+        # Pass education levels for smart comparison
+        cv_vectors["education_level"] = cv_result["parsed_data"].get("education_level")
+        jd_vectors["education_level"] = jd_result.get("education_level")
+
+        # Pass job titles for experience matching
+        cv_experience = cv_result["parsed_data"].get("experience", [])
+        cv_vectors["job_titles"] = [
+            e.get("job_title", "") for e in cv_experience
+            if isinstance(e, dict) and e.get("job_title")
+        ]
+        # Extract job title from JD (first line or key phrase)
+        jd_title = None
+        jd_phrases = jd_result.get("key_phrases", [])
+        if jd_phrases:
+            jd_title = jd_phrases[0]
+        jd_vectors["job_title"] = jd_title
 
         # Step 5: Compute match
+        t0 = time.perf_counter()
         match_result = matching_service.compute_match(cv_vectors, jd_vectors)
+        scoring_ms = (time.perf_counter() - t0) * 1000
+
+        total_ms = (time.perf_counter() - start_total) * 1000
 
         return {
             # Existing fields (backward compat)
@@ -40,7 +83,6 @@ def match_cv_with_jd(
             "match_score": match_result["match_score"],
             "overall_similarity": match_result["overall_similarity"],
             "section_similarities": match_result["section_similarities"],
-            "tfidf_similarity": match_result["tfidf_similarity"],
             "cv_summary": cv_result["parsed_data"].get("summary"),
             "normalized_skills": normalized_cv.get("skills"),
             "required_skills": jd_result.get("required_skills"),
@@ -60,6 +102,16 @@ def match_cv_with_jd(
             "skill_details": match_result.get("skill_details"),
             "strengths": match_result.get("strengths", []),
             "gaps": match_result.get("gaps", []),
+
+            "timing": {
+                "cv_processing_ms": round(cv_processing_ms),
+                "cv_normalization_ms": round(cv_normalization_ms),
+                "jd_preprocessing_ms": round(jd_preprocessing_ms),
+                "cv_encoding_ms": round(cv_encoding_ms),
+                "jd_encoding_ms": round(jd_encoding_ms),
+                "scoring_ms": round(scoring_ms),
+                "total_ms": round(total_ms),
+            }
         }
 
     except Exception as e:

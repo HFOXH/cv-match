@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 from openai import OpenAI
 from ..exceptions import ParsingError
 from dotenv import load_dotenv
+from services.openai_retry import retry_openai_call
 
 load_dotenv()
 
@@ -17,13 +18,14 @@ Do not invent or hallucinate information — only extract what is explicitly pre
 
 K_USER_PROMPT_TEMPLATE = """Parse the following CV/resume text and extract structured information.
 
-IMPORTANT: For the "skills" field, extract ALL skills, technologies, tools, and frameworks from the ENTIRE CV:
-- Skills/Technical Skills sections
-- "Technologies used" lines under each job
-- Project descriptions
-- Certification and course titles (e.g., "SCRUM Certification" → add "Scrum", "Ethical Hacking Course" → add "Ethical Hacking")
-- Education field names and degree titles (e.g., "Master's in Cybersecurity" → add "Cybersecurity", "Postgraduate in AI and Machine Learning" → add "Artificial Intelligence", "Machine Learning")
-Do not limit extraction to just the Skills section.
+IMPORTANT: For the "skills" field, extract ALL skills from the ENTIRE CV — this applies to ANY industry (retail, healthcare, trades, IT, hospitality, etc.):
+- Explicit skills/qualifications sections
+- Skills demonstrated in job responsibilities (e.g., "managed inventory" → "inventory management", "operated cash register" → "cash handling", "prepared food items" → "food preparation")
+- Soft skills shown through experience (e.g., working in teams → "teamwork", handling customers → "customer service", juggling multiple tasks → "multitasking")
+- Certifications and course titles (e.g., "Food Safety Certificate" → "food safety", "First Aid" → "first aid")
+- Education field names (e.g., "Diploma in Culinary Arts" → "culinary arts", "Software Engineering" → "software engineering")
+- Tools, equipment, or systems mentioned (e.g., "POS systems", "forklift", "Excel", "SAP")
+Do not limit extraction to just the Skills section. Extract from ALL sections.
 
 Return a JSON object with this exact schema:
 {{
@@ -53,7 +55,8 @@ Return a JSON object with this exact schema:
         }}
     ],
     "certifications": ["cert1", "cert2", ...],
-    "summary": "Professional summary/objective if present, or null"
+    "summary": "Professional summary/objective if present, or null",
+    "education_level": "The candidate's HIGHEST education level. Must be one of: 'phd', 'masters', 'bachelors', 'college diploma', 'high school', or null if unknown"
 }}
 
 CV TEXT:
@@ -92,7 +95,8 @@ class OpenAICVParser:
         prompt = K_USER_PROMPT_TEMPLATE.format(cv_text=raw_text[:K_MAX_CV_TEXT_LENGTH])
 
         try:
-            response = self.client.chat.completions.create(
+            response = retry_openai_call(
+                self.client.chat.completions.create,
                 model=self.model,
                 messages=[
                     {"role": "system", "content": K_SYSTEM_PROMPT},
