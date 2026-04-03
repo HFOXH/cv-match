@@ -246,6 +246,11 @@ POST /match_job
 }
 ```
 
+**Running Backend**
+```bash
+uvicorn api.main:app --reload
+```
+
 ---
 
 ## Frontend Documentation
