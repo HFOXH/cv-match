@@ -59,8 +59,6 @@ class TestJobDescriptionPreprocessor:
 
         assert "original_text" in result
         assert "cleaned_text" in result
-        assert "tokens" in result
-        assert "lemmas" in result
         assert "key_phrases" in result
         assert "required_skills" in result
         assert "preferred_skills" in result
@@ -89,15 +87,13 @@ class TestJobDescriptionPreprocessor:
 
         assert result["original_text"] == ""
         assert result["cleaned_text"] == ""
-        assert result["tokens"] == []
-        assert result["lemmas"] == []
         assert result["required_skills"] == []
 
     def test_preprocess_none_text(self):
         preprocessor = JobDescriptionPreprocessor(openai_api_key=None)
         result = preprocessor.preprocess(None)
 
-        assert result["tokens"] == []
+        assert result["required_skills"] == []
 
     def test_clean_text(self):
         preprocessor = JobDescriptionPreprocessor(openai_api_key=None)
@@ -107,28 +103,6 @@ class TestJobDescriptionPreprocessor:
         assert "https://example.com" not in cleaned
         assert "hr@company.com" not in cleaned
 
-    def test_tokenize_produces_tokens(self):
-        preprocessor = JobDescriptionPreprocessor(openai_api_key=None)
-        tokens = preprocessor.tokenize("Python developer with experience")
-
-        assert isinstance(tokens, list)
-        assert len(tokens) > 0
-        assert "Python" in tokens
-
-    def test_tokenize_removes_stop_words(self):
-        preprocessor = JobDescriptionPreprocessor(openai_api_key=None)
-        tokens = preprocessor.tokenize("The developer should include Python")
-
-        token_lower = [t.lower() for t in tokens]
-        assert "the" not in token_lower
-        assert "should" not in token_lower
-
-    def test_lemmatize_produces_lemmas(self):
-        preprocessor = JobDescriptionPreprocessor(openai_api_key=None)
-        lemmas = preprocessor.lemmatize(["developing", "applications"])
-
-        assert isinstance(lemmas, list)
-        assert len(lemmas) > 0
 
 
 class TestErrorHandling:

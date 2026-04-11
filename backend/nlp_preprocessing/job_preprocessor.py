@@ -47,14 +47,13 @@ Job Description:
 class JobDescriptionPreprocessor:
     """Hybrid preprocessing pipeline for job descriptions.
 
-    - Traditional NLP: text cleaning, tokenization, lemmatization
+    - Traditional NLP: text cleaning
     - OpenAI API: skills extraction, classification, key phrase extraction
     """
 
     # /*
     # * function name: __init__()
-    # * Description: Initialize the hybrid JD preprocessor. Loads spaCy model
-    # *              and OpenAI client.
+    # * Description: Initialize the hybrid JD preprocessor. Sets up OpenAI client.
     # * Parameter: openai_api_key : Optional[str] : OpenAI API key. If None,
     # *              reads from OPENAI_API_KEY env var.
     # * return: None
@@ -73,10 +72,10 @@ class JobDescriptionPreprocessor:
     # /*
     # * function name: preprocess()
     # * Description: Run the full hybrid preprocessing pipeline on a job description.
-    # *              Traditional NLP handles cleaning/tokenization/lemmatization.
+    # *              Traditional NLP handles text cleaning.
     # *              OpenAI handles skills extraction and classification.
     # * Parameter: text : str : Raw job description text.
-    # * return: dict : Processed JD data with tokens, lemmas, skills, features.
+    # * return: dict : Processed JD data with cleaned text, skills, and features.
     # */
     def preprocess(self, text: str) -> Dict[str, Any]:
         if not text or not text.strip():
@@ -169,8 +168,6 @@ class JobDescriptionPreprocessor:
         return {
             "original_text": text,
             "cleaned_text": "",
-            "tokens": [],
-            "lemmas": [],
             "key_phrases": [],
             "required_skills": [],
             "preferred_skills": [],
