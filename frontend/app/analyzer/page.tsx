@@ -1,9 +1,22 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, useRef, ChangeEvent } from "react";
 import Navbar from "@/components/Navbar";
 import Paywall from "@/components/Paywall";
 import Footer from "@/components/Footer";
+
+// Backend pipeline stages, in the order routes/match.py runs them.
+// `est` is the typical duration in ms (used to animate the highlight while
+// the backend is working — the backend doesn't stream progress, so we
+// estimate). `key` matches the field in the response's `timing` object.
+const PIPELINE_STEPS = [
+  { key: "cv_processing",    label: "Extract & parse CV",    desc: "Read PDF/DOCX, GPT-4o-mini parses structure",       est: 10000 },
+  { key: "cv_normalization", label: "Normalize CV",          desc: "GPT reformats CV into comparison-ready fields",     est: 6000  },
+  { key: "jd_preprocessing", label: "Preprocess JD",         desc: "GPT extracts skills, requirements, key phrases",    est: 5000  },
+  { key: "cv_encoding",      label: "Embed CV sections",     desc: "OpenAI embeddings for skills / experience / overall", est: 1500 },
+  { key: "jd_encoding",      label: "Embed JD sections",     desc: "OpenAI embeddings for the job description",        est: 1500  },
+  { key: "scoring",          label: "Match & score",         desc: "Jaccard + fuzzy + semantic matching, sigmoid calibration", est: 5000 },
+];
 
 export default function SimpleMatcher() {
   const [text, setText] = useState("");
@@ -36,6 +49,14 @@ export default function SimpleMatcher() {
   const [gaps, setGaps] = useState<string[]>([]);
   const [error, setError] = useState("");
 
+  // Pipeline progress state. currentStepIdx: -1 = never run, 0..5 = currently
+  // running that step, >=6 = all steps done. timing is the real breakdown
+  // from the backend response once it arrives.
+  const [currentStepIdx, setCurrentStepIdx] = useState<number>(-1);
+  const [timing, setTiming] = useState<Record<string, number> | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const analyzeStartRef = useRef<number>(0);
+
   const circumference = 2 * Math.PI * 48;
   const scoreColor = (n: number) => n >= 70 ? "#10b981" : n >= 40 ? "#f59e0b" : "#ef4444";
   const barColor = (n: number) => n >= 70 ? "bg-emerald-500" : n >= 40 ? "bg-amber-500" : "bg-red-500";
@@ -53,6 +74,27 @@ export default function SimpleMatcher() {
     if (!cvLoaded || !text.trim()) return;
     setLoading(true);
     setError("");
+
+    // Start the pipeline progress animation. The backend doesn't stream
+    // progress, so we advance the highlighted step based on cumulative
+    // estimated durations. When the real response arrives, we replace
+    // the estimates with real timings in the `timing` state.
+    setTiming(null);
+    setCurrentStepIdx(0);
+    analyzeStartRef.current = Date.now();
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - analyzeStartRef.current;
+      let cum = 0;
+      let idx = PIPELINE_STEPS.length - 1;
+      for (let i = 0; i < PIPELINE_STEPS.length; i++) {
+        cum += PIPELINE_STEPS[i].est;
+        if (elapsed < cum) { idx = i; break; }
+      }
+      setCurrentStepIdx(idx);
+    }, 200);
+
+    let succeeded = false;
     try {
       const formData = new FormData();
       formData.append("file", cvFile!);
@@ -83,11 +125,21 @@ export default function SimpleMatcher() {
       setSkillDetails(r.skill_details || null);
       setStrengths(r.strengths || []);
       setGaps(r.gaps || []);
+      setTiming(r.timing || null);
+      succeeded = true;
     } catch {
       setError("Could not connect to the server. Please make sure the backend is running.");
       setMatchScore(null);
     } finally {
       setLoading(false);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      // On success, mark all pipeline steps as done. On any error
+      // (HTTP failure or network error), reset the pipeline to idle so
+      // the user sees a clean slate when they retry.
+      setCurrentStepIdx(succeeded ? PIPELINE_STEPS.length : -1);
     }
   };
 
@@ -238,6 +290,69 @@ export default function SimpleMatcher() {
           {error && (
             <div className="mb-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-sm text-red-700 dark:text-red-400">{error}</div>
           )}
+
+          {/* How it works — live pipeline visualization */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div className="flex items-start justify-between gap-3 mb-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">How it works</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  {currentStepIdx === -1 && "Six stages run each time you analyze. Click above to watch them light up."}
+                  {currentStepIdx >= 0 && currentStepIdx < PIPELINE_STEPS.length && "Analyzing… each stage is lighting up as it runs."}
+                  {currentStepIdx >= PIPELINE_STEPS.length && "All stages complete. Real timings shown on the right."}
+                </p>
+              </div>
+              {timing && typeof timing.total_ms === "number" && (
+                <span className="text-[11px] font-mono-dm text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0 mt-1">
+                  total {(timing.total_ms / 1000).toFixed(1)}s
+                </span>
+              )}
+            </div>
+
+            <ol className="space-y-3">
+              {PIPELINE_STEPS.map((step, i) => {
+                const isActive = loading && i === currentStepIdx;
+                const isDone = currentStepIdx >= PIPELINE_STEPS.length || (currentStepIdx >= 0 && i < currentStepIdx);
+                const isIdle = currentStepIdx === -1;
+                const isPending = !isActive && !isDone && !isIdle;
+                const realMs = timing?.[`${step.key}_ms`];
+
+                const circleClass =
+                  isActive ? "bg-blue-500 text-white ring-4 ring-blue-200 dark:ring-blue-900/50 animate-pulse"
+                  : isDone  ? "bg-emerald-500 text-white"
+                  :           "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500";
+
+                const titleClass =
+                  isActive ? "text-blue-600 dark:text-blue-400 font-semibold"
+                  : isDone  ? "text-gray-800 dark:text-gray-100 font-medium"
+                  : isPending ? "text-gray-400 dark:text-gray-500 font-medium"
+                  :           "text-gray-700 dark:text-gray-200 font-medium";
+
+                return (
+                  <li key={step.key} className="flex items-start gap-3">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${circleClass}`}>
+                      {isDone
+                        ? <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7.5l2.5 2.5 5.5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        : i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className={`text-sm transition-colors ${titleClass}`}>{step.label}</p>
+                        {typeof realMs === "number" && (
+                          <span className="text-[11px] font-mono-dm text-gray-400 dark:text-gray-500 flex-shrink-0">
+                            {(realMs / 1000).toFixed(1)}s
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-0.5 leading-relaxed transition-colors ${isActive || isDone ? "text-gray-500 dark:text-gray-400" : "text-gray-400 dark:text-gray-500"}`}>
+                        {step.desc}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
 
           {/* Results */}
           {matchScore !== null && (
