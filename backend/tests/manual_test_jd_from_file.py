@@ -39,12 +39,6 @@ def main():
     print("\n=== CLEANED TEXT ===")
     print(result["cleaned_text"][:300])
 
-    print("\n=== TOKENS ===")
-    print(result["tokens"])
-
-    print("\n=== LEMMAS ===")
-    print(result["lemmas"])
-
     print("\n=== REQUIRED SKILLS ===")
     print(result["required_skills"])
 

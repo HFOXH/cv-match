@@ -20,7 +20,7 @@ export default function SimpleMatcher() {
   const [keyPhrases, setKeyPhrases] = useState<string[]>([]);
   const [overallSimilarity, setOverallSimilarity] = useState<number | null>(null);
   const [sectionSimilarities, setSectionSimilarities] = useState<Record<string, number>>({});
-  const [tfidfSimilarity, setTfidfSimilarity] = useState<number | null>(null);
+  const [rawScores, setRawScores] = useState<Record<string, number>>({});
   const [isFallback, setIsFallback] = useState(false);
   const [matchRating, setMatchRating] = useState("");
   const [recommendation, setRecommendation] = useState("");
@@ -65,6 +65,7 @@ export default function SimpleMatcher() {
         return;
       }
       const r = await response.json();
+      console.log("[match] backend response:", r);
       setMatchScore(r.match_score);
       setCvSummary(r.cv_summary);
       setJobSummary(r.job_summary);
@@ -75,7 +76,7 @@ export default function SimpleMatcher() {
       setKeyPhrases(r.key_phrases || []);
       setOverallSimilarity(r.overall_similarity);
       setSectionSimilarities(r.section_similarities || {});
-      setTfidfSimilarity(r.tfidf_similarity);
+      setRawScores(r.raw_scores || {});
       setIsFallback(r.is_fallback || false);
       setMatchRating(r.match_rating || "");
       setRecommendation(r.recommendation || "");
@@ -94,12 +95,22 @@ export default function SimpleMatcher() {
     ? circumference - (matchScore / 100) * circumference
     : circumference;
 
+  // Skills match = max of Jaccard % (from section_similarities, which is really Jaccard
+  // despite the field name) and the raw semantic cosine % (from raw_scores.skills_semantic).
+  // This way the display reflects semantic alignment when exact/fuzzy keyword matching
+  // misses synonyms — e.g., "retail customer service" vs "customer service".
+  const skillsMatchValue = Math.round(
+    Math.max(
+      sectionSimilarities.skills_semantic ?? 0,
+      (rawScores.skills_semantic ?? 0) * 100,
+    )
+  );
+
   const bars = [
     { label: "Overall semantic", value: overallSimilarity ?? 0, show: true },
-    { label: "Skills match", value: sectionSimilarities.skills_semantic ?? 0, show: !isFallback },
+    { label: "Skills similarity", value: skillsMatchValue, show: !isFallback },
     { label: "Experience relevance", value: sectionSimilarities.experience ?? 0, show: !isFallback },
     { label: "Education alignment", value: sectionSimilarities.education ?? 0, show: !isFallback },
-    { label: "Keyword match", value: tfidfSimilarity ?? 0, show: true },
   ].filter((b) => b.show);
 
   return (
@@ -237,11 +248,11 @@ export default function SimpleMatcher() {
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Score breakdown</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { label: "Overall", value: overallSimilarity ?? 0, sub: "semantic" },
-                    { label: "Skills", value: sectionSimilarities.skills_semantic ?? 0, sub: "match" },
-                    { label: "Experience", value: sectionSimilarities.experience ?? 0, sub: "relevance" },
-                    { label: "Keywords", value: tfidfSimilarity ?? 0, sub: "TF-IDF" },
-                  ].map((m) => (
+                    { label: "Overall", value: overallSimilarity ?? 0, sub: "semantic", show: true },
+                    { label: "Skills", value: skillsMatchValue, sub: "similarity", show: !isFallback },
+                    { label: "Experience", value: sectionSimilarities.experience ?? 0, sub: "relevance", show: !isFallback },
+                    { label: "Education", value: sectionSimilarities.education ?? 0, sub: "alignment", show: !isFallback },
+                  ].filter((m) => m.show).map((m) => (
                     <div key={m.label} className="bg-gray-100 dark:bg-gray-800 rounded-xl p-4">
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-1">{m.label}</p>
                       <p className="font-mono-dm text-2xl font-semibold text-gray-900 dark:text-white leading-none">{m.value}%</p>

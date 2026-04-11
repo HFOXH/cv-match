@@ -77,13 +77,22 @@ def match_cv_with_jd(
 
         total_ms = (time.perf_counter() - start_total) * 1000
 
+        # Candidate summary: prefer the parser's summary field, but fall back to the
+        # normalizer's full_text_for_embedding when the CV has no explicit summary
+        # section (common — most CVs don't have one).
+        cv_summary = (
+            cv_result["parsed_data"].get("summary")
+            or normalized_cv.get("full_text_for_embedding")
+            or None
+        )
+
         return {
             # Existing fields (backward compat)
             "cv_id": cv_result["cv_id"],
             "match_score": match_result["match_score"],
             "overall_similarity": match_result["overall_similarity"],
             "section_similarities": match_result["section_similarities"],
-            "cv_summary": cv_result["parsed_data"].get("summary"),
+            "cv_summary": cv_summary,
             "normalized_skills": normalized_cv.get("skills"),
             "required_skills": jd_result.get("required_skills"),
             "preferred_skills": jd_result.get("preferred_skills"),
@@ -99,6 +108,7 @@ def match_cv_with_jd(
             "recommendation": match_result["recommendation"],
             "confidence": match_result["confidence"],
             "breakdown": match_result["breakdown"],
+            "raw_scores": match_result.get("raw_scores", {}),
             "skill_details": match_result.get("skill_details"),
             "strengths": match_result.get("strengths", []),
             "gaps": match_result.get("gaps", []),
