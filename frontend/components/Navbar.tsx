@@ -25,9 +25,9 @@ export default function Navbar() {
         {/* Links */}
         <div className="hidden md:flex items-center gap-8">
           {[
-            ["How it works", "#how"],
-            ["Pricing", "#pricing"],
-            ["FAQ", "#faq"]
+            ["How it works", "/scoring"],
+            ["Pricing", "/#pricing"],
+            ["FAQ", "/#faq"]
           ].map(([label, href]) => (
             <a key={label} href={href}
               className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">

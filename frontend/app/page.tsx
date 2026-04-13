@@ -218,8 +218,8 @@ export default function LandingPage() {
               </svg>
               Analyze My Resume — Free
             </a>
-            <a href="#how" className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline underline-offset-4 transition-colors">
-              See how it works ↓
+            <a href="/scoring" className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline underline-offset-4 transition-colors">
+              See how it works →
             </a>
           </div>
 
@@ -318,7 +318,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── HOW IT WORKS ────────────────────────────────────────────────────── */}
-      <section id="how" className="py-24 px-6">
+      <section className="py-24 px-6">
         <div ref={howReveal.ref} className="max-w-5xl mx-auto">
           <div className={`text-center mb-16 reveal ${howReveal.visible ? "visible" : ""}`}>
             <div className="pill mb-5 inline-flex">How it works</div>
@@ -331,7 +331,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 mb-10">
             {[
               { step:"01", icon:"📄", title:"Upload Your Resume",        desc:"Drop your PDF or DOCX. We extract and understand every detail — experience, skills, education.", bg:"bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800",   accent:"text-blue-600 dark:text-blue-400" },
               { step:"02", icon:"📋", title:"Paste the Job Description", desc:"Copy-paste the full job posting. Our AI identifies requirements, keywords, and what matters most.",   bg:"bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800", accent:"text-amber-600 dark:text-amber-400" },
@@ -344,6 +344,12 @@ export default function LandingPage() {
                 <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
+          </div>
+
+          <div className="text-center">
+            <a href="/scoring" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+              See exactly how we score your match →
+            </a>
           </div>
         </div>
       </section>
