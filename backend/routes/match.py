@@ -101,6 +101,7 @@ def match_cv_with_jd(
             "key_phrases": jd_result.get("key_phrases"),
             "job_summary": jd_result.get("summary"),
             "is_fallback": match_result.get("_fallback", False),
+            "jd_parse_failed": jd_result.get("jd_parse_failed", False),
 
             # New fields from SimilarityEngine
             "match_percentage": match_result["match_percentage"],

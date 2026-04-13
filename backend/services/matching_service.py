@@ -66,8 +66,10 @@ class MatchingService:
         report["section_similarities"] = {}
         if not is_fallback:
             breakdown = report.get("breakdown", {})
+            skills_match = breakdown.get("skills", {}).get("score", round(raw.get("skills_semantic", 0) * 100, 2))
             report["section_similarities"] = {
-                "skills_semantic": breakdown.get("skills", {}).get("score", round(raw.get("skills_semantic", 0) * 100, 2)),
+                "skills_match": skills_match,
+                "skills_semantic": skills_match,
                 "experience": breakdown.get("experience", {}).get("score", round(raw.get("experience_match", 0) * 100, 2)),
                 "education": breakdown.get("education", {}).get("score", round(raw.get("education_match", 0) * 100, 2)),
             }

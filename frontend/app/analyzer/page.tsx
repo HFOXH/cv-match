@@ -35,6 +35,7 @@ export default function SimpleMatcher() {
   const [sectionSimilarities, setSectionSimilarities] = useState<Record<string, number>>({});
   const [rawScores, setRawScores] = useState<Record<string, number>>({});
   const [isFallback, setIsFallback] = useState(false);
+  const [jdParseFailed, setJdParseFailed] = useState(false);
   const [matchRating, setMatchRating] = useState("");
   const [recommendation, setRecommendation] = useState("");
   const [skillDetails, setSkillDetails] = useState<{
@@ -120,6 +121,7 @@ export default function SimpleMatcher() {
       setSectionSimilarities(r.section_similarities || {});
       setRawScores(r.raw_scores || {});
       setIsFallback(r.is_fallback || false);
+      setJdParseFailed(r.jd_parse_failed || false);
       setMatchRating(r.match_rating || "");
       setRecommendation(r.recommendation || "");
       setSkillDetails(r.skill_details || null);
@@ -147,13 +149,14 @@ export default function SimpleMatcher() {
     ? circumference - (matchScore / 100) * circumference
     : circumference;
 
-  // Skills match = max of Jaccard % (from section_similarities, which is really Jaccard
-  // despite the field name) and the raw semantic cosine % (from raw_scores.skills_semantic).
-  // This way the display reflects semantic alignment when exact/fuzzy keyword matching
-  // misses synonyms — e.g., "retail customer service" vs "customer service".
+  // Take the stronger signal: the skills-match score (keyword + fuzzy + semantic
+  // reconciliation, from section_similarities.skills_match) vs the raw semantic
+  // cosine % (from raw_scores.skills_semantic). This way the display reflects
+  // semantic alignment when exact/fuzzy keyword matching misses synonyms —
+  // e.g., "retail customer service" vs "customer service".
   const skillsMatchValue = Math.round(
     Math.max(
-      sectionSimilarities.skills_semantic ?? 0,
+      sectionSimilarities.skills_match ?? sectionSimilarities.skills_semantic ?? 0,
       (rawScores.skills_semantic ?? 0) * 100,
     )
   );
@@ -382,6 +385,11 @@ export default function SimpleMatcher() {
                 {isFallback && (
                   <div className="mb-4 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
                     Limited analysis — section breakdown unavailable
+                  </div>
+                )}
+                {jdParseFailed && (
+                  <div className="mb-4 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
+                    Job description could not be parsed — skills and requirements may be missing. Try resubmitting.
                   </div>
                 )}
                 <div className="space-y-4">

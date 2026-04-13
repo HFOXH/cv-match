@@ -99,6 +99,7 @@ class JobDescriptionPreprocessor:
             "experience_requirements": openai_extracted.get("experience_requirements"),
             "education_requirements": openai_extracted.get("education_requirements"),
             "summary": openai_extracted.get("summary"),
+            "jd_parse_failed": openai_extracted.get("_parse_failed", False),
         }
 
     # /*
@@ -121,7 +122,7 @@ class JobDescriptionPreprocessor:
     def openai_extract(self, text: str) -> Dict[str, Any]:
         if not self.client:
             logger.error("OpenAI client not available. Cannot extract JD features.")
-            return self._empty_extraction()
+            return self._empty_extraction(failed=True)
 
         prompt = K_EXTRACTION_USER_PROMPT.format(jd_text=text)
 
@@ -143,15 +144,15 @@ class JobDescriptionPreprocessor:
 
         except json.JSONDecodeError as e:
             logger.error("Failed to parse OpenAI response as JSON: %s", e)
-            return self._empty_extraction()
+            return self._empty_extraction(failed=True)
         except Exception as e:
             logger.error("OpenAI API call failed: %s", e)
-            return self._empty_extraction()
+            return self._empty_extraction(failed=True)
 
     # --- Private helpers ---
 
     @staticmethod
-    def _empty_extraction() -> Dict[str, Any]:
+    def _empty_extraction(failed: bool = False) -> Dict[str, Any]:
         return {
             "required_skills": [],
             "preferred_skills": [],
@@ -161,6 +162,7 @@ class JobDescriptionPreprocessor:
             "education_requirements": None,
             "key_phrases": [],
             "summary": None,
+            "_parse_failed": failed,
         }
 
     @staticmethod
@@ -176,4 +178,5 @@ class JobDescriptionPreprocessor:
             "experience_requirements": None,
             "education_requirements": None,
             "summary": None,
+            "jd_parse_failed": False,
         }
