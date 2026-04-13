@@ -34,8 +34,6 @@ export default function SimpleMatcher() {
   const [overallSimilarity, setOverallSimilarity] = useState<number | null>(null);
   const [sectionSimilarities, setSectionSimilarities] = useState<Record<string, number>>({});
   const [rawScores, setRawScores] = useState<Record<string, number>>({});
-  const [isFallback, setIsFallback] = useState(false);
-  const [jdParseFailed, setJdParseFailed] = useState(false);
   const [matchRating, setMatchRating] = useState("");
   const [recommendation, setRecommendation] = useState("");
   const [skillDetails, setSkillDetails] = useState<{
@@ -103,7 +101,18 @@ export default function SimpleMatcher() {
       const response = await fetch("http://localhost:8000/api/v1/match", { method: "POST", body: formData });
       if (!response.ok) {
         const err = await response.json().catch(() => null);
-        setError(err?.detail || "An error occurred while analyzing. Please try again.");
+        if (response.status === 503) {
+          setError(
+            err?.detail ||
+              "Analysis service is temporarily unavailable. Please try again in a moment."
+          );
+        } else if (response.status === 413) {
+          setError("File too large — maximum size is 5MB.");
+        } else if (response.status === 400) {
+          setError(err?.detail || "Invalid input. Please check your CV and job description.");
+        } else {
+          setError(err?.detail || "An error occurred while analyzing. Please try again.");
+        }
         setMatchScore(null);
         return;
       }
@@ -120,8 +129,6 @@ export default function SimpleMatcher() {
       setOverallSimilarity(r.overall_similarity);
       setSectionSimilarities(r.section_similarities || {});
       setRawScores(r.raw_scores || {});
-      setIsFallback(r.is_fallback || false);
-      setJdParseFailed(r.jd_parse_failed || false);
       setMatchRating(r.match_rating || "");
       setRecommendation(r.recommendation || "");
       setSkillDetails(r.skill_details || null);
@@ -162,11 +169,11 @@ export default function SimpleMatcher() {
   );
 
   const bars = [
-    { label: "Overall semantic", value: overallSimilarity ?? 0, show: true },
-    { label: "Skills similarity", value: skillsMatchValue, show: !isFallback },
-    { label: "Experience relevance", value: sectionSimilarities.experience ?? 0, show: !isFallback },
-    { label: "Education alignment", value: sectionSimilarities.education ?? 0, show: !isFallback },
-  ].filter((b) => b.show);
+    { label: "Overall semantic", value: overallSimilarity ?? 0 },
+    { label: "Skills similarity", value: skillsMatchValue },
+    { label: "Experience relevance", value: sectionSimilarities.experience ?? 0 },
+    { label: "Education alignment", value: sectionSimilarities.education ?? 0 },
+  ];
 
   return (
     <Paywall>
@@ -366,11 +373,11 @@ export default function SimpleMatcher() {
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Score breakdown</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { label: "Overall", value: overallSimilarity ?? 0, sub: "semantic", show: true },
-                    { label: "Skills", value: skillsMatchValue, sub: "similarity", show: !isFallback },
-                    { label: "Experience", value: sectionSimilarities.experience ?? 0, sub: "relevance", show: !isFallback },
-                    { label: "Education", value: sectionSimilarities.education ?? 0, sub: "alignment", show: !isFallback },
-                  ].filter((m) => m.show).map((m) => (
+                    { label: "Overall", value: overallSimilarity ?? 0, sub: "semantic" },
+                    { label: "Skills", value: skillsMatchValue, sub: "similarity" },
+                    { label: "Experience", value: sectionSimilarities.experience ?? 0, sub: "relevance" },
+                    { label: "Education", value: sectionSimilarities.education ?? 0, sub: "alignment" },
+                  ].map((m) => (
                     <div key={m.label} className="bg-gray-100 dark:bg-gray-800 rounded-xl p-4">
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-1">{m.label}</p>
                       <p className="font-mono-dm text-2xl font-semibold text-gray-900 dark:text-white leading-none">{m.value}%</p>
@@ -382,16 +389,6 @@ export default function SimpleMatcher() {
 
               {/* Progress bars */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-                {isFallback && (
-                  <div className="mb-4 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
-                    Limited analysis — section breakdown unavailable
-                  </div>
-                )}
-                {jdParseFailed && (
-                  <div className="mb-4 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
-                    Job description could not be parsed — skills and requirements may be missing. Try resubmitting.
-                  </div>
-                )}
                 <div className="space-y-4">
                   {bars.map((b) => (
                     <div key={b.label}>
@@ -462,7 +459,7 @@ export default function SimpleMatcher() {
               </div>
 
               {/* Skills */}
-              {skillDetails && !isFallback && (
+              {skillDetails && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Skill analysis</p>

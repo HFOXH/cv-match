@@ -32,21 +32,43 @@ class SectionEmbeddingGenerator:
         section_names = []
         section_texts = []
 
-        if normalized_cv.get("skills"):
-            section_names.append("skills")
-            section_texts.append(", ".join(normalized_cv["skills"]))
+        skills_text = ""
+        experience_text = ""
+        education_text = ""
 
-        if normalized_cv.get("experience_text"):
+        skills = normalized_cv.get("skills")
+        if isinstance(skills, list) and skills:
+            skills_text = ", ".join(s for s in skills if isinstance(s, str) and s.strip())
+            if skills_text:
+                section_names.append("skills")
+                section_texts.append(skills_text)
+
+        if isinstance(normalized_cv.get("experience_text"), str) and normalized_cv["experience_text"].strip():
+            experience_text = normalized_cv["experience_text"].strip()
             section_names.append("experience")
-            section_texts.append(normalized_cv["experience_text"])
+            section_texts.append(experience_text)
 
-        if normalized_cv.get("education_text"):
+        if isinstance(normalized_cv.get("education_text"), str) and normalized_cv["education_text"].strip():
+            education_text = normalized_cv["education_text"].strip()
             section_names.append("education")
-            section_texts.append(normalized_cv["education_text"])
+            section_texts.append(education_text)
 
-        if normalized_cv.get("full_text_for_embedding"):
+        # Always produce an "overall" embedding. Prefer the normalizer's
+        # full_text_for_embedding; if missing, stitch sections together so we
+        # still get a usable overall vector.
+        overall_text = ""
+        full_text = normalized_cv.get("full_text_for_embedding")
+        if isinstance(full_text, str) and full_text.strip():
+            overall_text = full_text.strip()
+        else:
+            combined = " ".join(t for t in [skills_text, experience_text, education_text] if t).strip()
+            if combined:
+                overall_text = combined
+                logger.info("full_text_for_embedding missing — using combined section text for overall")
+
+        if overall_text:
             section_names.append("overall")
-            section_texts.append(normalized_cv["full_text_for_embedding"])
+            section_texts.append(overall_text)
 
         if not section_texts:
             logger.warning("No CV section texts available for embedding")
@@ -76,25 +98,42 @@ class SectionEmbeddingGenerator:
         section_names = []
         section_texts = []
 
-        all_jd_skills = (
-            preprocessed_jd.get("required_skills", [])
-            + preprocessed_jd.get("preferred_skills", [])
-        )
+        all_jd_skills = [
+            s for s in (
+                (preprocessed_jd.get("required_skills") or [])
+                + (preprocessed_jd.get("preferred_skills") or [])
+            )
+            if isinstance(s, str) and s.strip()
+        ]
         if all_jd_skills:
             section_names.append("skills")
             section_texts.append(", ".join(all_jd_skills))
 
-        if preprocessed_jd.get("experience_requirements"):
+        if isinstance(preprocessed_jd.get("experience_requirements"), str) and preprocessed_jd["experience_requirements"].strip():
             section_names.append("experience")
-            section_texts.append(preprocessed_jd["experience_requirements"])
+            section_texts.append(preprocessed_jd["experience_requirements"].strip())
 
-        if preprocessed_jd.get("education_requirements"):
+        if isinstance(preprocessed_jd.get("education_requirements"), str) and preprocessed_jd["education_requirements"].strip():
             section_names.append("education")
-            section_texts.append(preprocessed_jd["education_requirements"])
+            section_texts.append(preprocessed_jd["education_requirements"].strip())
 
-        if preprocessed_jd.get("cleaned_text"):
+        # Always produce an "overall" embedding — prefer cleaned_text, fall back
+        # to original_text, else stitch the section texts together.
+        overall_text = ""
+        for candidate_key in ("cleaned_text", "original_text", "summary"):
+            val = preprocessed_jd.get(candidate_key)
+            if isinstance(val, str) and val.strip():
+                overall_text = val.strip()
+                break
+        if not overall_text:
+            combined = " ".join(t for t in section_texts if t).strip()
+            if combined:
+                overall_text = combined
+                logger.info("JD text fields missing — using combined section text for overall")
+
+        if overall_text:
             section_names.append("overall")
-            section_texts.append(preprocessed_jd["cleaned_text"])
+            section_texts.append(overall_text)
 
         if not section_texts:
             logger.warning("No JD section texts available for embedding")

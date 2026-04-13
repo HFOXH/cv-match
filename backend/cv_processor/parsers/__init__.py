@@ -6,6 +6,6 @@
 # DESCRIPTION : CV parsing using OpenAI GPT-4o-mini.
 # */
 
-from .openai_parser import OpenAICVParser, get_parser, fallback_parse
+from .openai_parser import OpenAICVParser, get_parser
 
-__all__ = ["OpenAICVParser", "get_parser", "fallback_parse"]
+__all__ = ["OpenAICVParser", "get_parser"]
