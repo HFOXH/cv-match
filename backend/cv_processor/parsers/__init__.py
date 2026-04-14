@@ -1,10 +1,8 @@
-# /*
-# FILE : __init__.py
-# PROJECT : CVMatch - CV Processing Module (Task 1)
-# PROGRAMMER : Santiago Cardenas and Amel Sunil
-# FIRST VERSION : 2025-02-27
-# DESCRIPTION : CV parsing using OpenAI GPT-4o-mini.
-# */
+"""CV parsing using OpenAI GPT-4o-mini.
+
+Authors: Santiago Cardenas and Amel Sunil
+First version: 2025-02-27
+"""
 
 from .openai_parser import OpenAICVParser, get_parser
 

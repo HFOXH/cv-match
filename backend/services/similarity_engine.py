@@ -12,21 +12,20 @@ from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
 from services.openai_retry import retry_openai_call
 from prompts import K_SEMANTIC_MATCH_PROMPT
+from config import (
+    SEMANTIC_MATCH_MODEL,
+    SIGMOID_STEEPNESS,
+    SIGMOID_MIDPOINT,
+    WEIGHTS,
+)
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-K_SIGMOID_STEEPNESS = 8
-K_SIGMOID_MIDPOINT = 0.30
-
-K_WEIGHTS_FULL = {
-    "skills_jaccard": 0.25,
-    "skills_semantic": 0.10,
-    "sbert_overall": 0.30,
-    "experience_match": 0.25,
-    "education_match": 0.10,
-}
+K_SIGMOID_STEEPNESS = SIGMOID_STEEPNESS
+K_SIGMOID_MIDPOINT = SIGMOID_MIDPOINT
+K_WEIGHTS_FULL = WEIGHTS
 
 K_SCORE_BANDS = [
     (90, 100, "Excellent Match", "Strong candidate — definitely apply", "green"),
@@ -343,7 +342,7 @@ class SimilarityEngine:
         try:
             response = retry_openai_call(
                 self.openai_client.chat.completions.create,
-                model="gpt-4o-mini",
+                model=SEMANTIC_MATCH_MODEL,
                 messages=[
                     {"role": "system", "content": "Return only valid JSON."},
                     {"role": "user", "content": prompt},

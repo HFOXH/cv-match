@@ -58,13 +58,15 @@ K_MOCK_OPENAI_RESPONSE = {
 }
 
 
-# /*
-# * function name: _mock_completion()
-# * Description: Helper to create a mock OpenAI ChatCompletion response object.
-# * Parameter: content : str : The JSON string the mock API should return.
-# * return: MagicMock : Mock response object with choices[0].message.content set.
-# */
 def _mock_completion(content: str):
+    """Helper to create a mock OpenAI ChatCompletion response object.
+
+    Args:
+        content: The JSON string the mock API should return.
+
+    Returns:
+        Mock response object with choices[0].message.content set.
+    """
     choice = MagicMock()
     choice.message.content = content
     response = MagicMock()

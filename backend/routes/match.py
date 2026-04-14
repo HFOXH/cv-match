@@ -7,12 +7,11 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 # init order stable (services.__init__ pulls in cv_processor transitively)
 from services import CVService, job_description_service, normalization_service, matching_service
 from cv_processor.exceptions import ParsingError, ProcessingError
+from config import MAX_FILE_SIZE
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 SERVICE_UNAVAILABLE_MESSAGE = (
     "Analysis service is temporarily unavailable. Please try again in a moment."

@@ -4,14 +4,15 @@ from typing import List, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 from services.openai_retry import retry_openai_call
+from config import EMBEDDING_MODEL, EMBEDDING_DIMS, MAX_EMBEDDING_INPUT
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-K_EMBEDDING_MODEL = "text-embedding-3-small"
-K_EMBEDDING_DIMS = 1536
-K_MAX_INPUT_LENGTH = 8000
+K_EMBEDDING_MODEL = EMBEDDING_MODEL
+K_EMBEDDING_DIMS = EMBEDDING_DIMS
+K_MAX_INPUT_LENGTH = MAX_EMBEDDING_INPUT
 
 
 class OpenAIEncoder:
