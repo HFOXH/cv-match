@@ -22,14 +22,12 @@ class CVDataNormalizer:
     Logs errors if OpenAI is unavailable or fails.
     """
 
-    # /*
-    # * function name: __init__()
-    # * Description: Initialize the CV data normalizer with OpenAI client.
-    # * Parameter: openai_api_key : Optional[str] : OpenAI API key. If None,
-    # *              reads from OPENAI_API_KEY env var.
-    # * return: None
-    # */
     def __init__(self, openai_api_key: Optional[str] = None):
+        """Initialize the CV data normalizer with OpenAI client.
+
+        Args:
+            openai_api_key: OpenAI API key. If None, reads from OPENAI_API_KEY env var.
+        """
         api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         if api_key:
             self.client = OpenAI(api_key=api_key)
@@ -39,17 +37,20 @@ class CVDataNormalizer:
 
         logger.info("CVDataNormalizer initialized")
 
-    # /*
-    # * function name: normalize()
-    # * Description: Normalize OpenAI-parsed CV data for downstream matching.
-    # *              Uses OpenAI for intelligent normalization. Returns empty
-    # *              result and logs error if OpenAI is unavailable or fails.
-    # * Parameter: parsed_cv : dict : Dictionary from OpenAI parser with keys:
-    # *              contact, skills, experience, education, certifications, summary.
-    # * return: dict : Normalized data with skills, experience_text,
-    # *              education_text, and full_text_for_embedding.
-    # */
     def normalize(self, parsed_cv: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize OpenAI-parsed CV data for downstream matching.
+
+        Uses OpenAI for intelligent normalization. Returns empty result and
+        logs error if OpenAI is unavailable or fails.
+
+        Args:
+            parsed_cv: Dictionary from OpenAI parser with keys: contact, skills,
+                experience, education, certifications, summary.
+
+        Returns:
+            Normalized data with skills, experience_text, education_text, and
+            full_text_for_embedding.
+        """
         if not self.client:
             logger.error("OpenAI client not available. Cannot normalize CV data.")
             return self._empty_result()

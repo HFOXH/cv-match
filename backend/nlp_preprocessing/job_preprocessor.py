@@ -21,15 +21,12 @@ class JobDescriptionPreprocessor:
     - OpenAI API: skills extraction, classification, key phrase extraction
     """
 
-    # /*
-    # * function name: __init__()
-    # * Description: Initialize the hybrid JD preprocessor. Sets up OpenAI client.
-    # * Parameter: openai_api_key : Optional[str] : OpenAI API key. If None,
-    # *              reads from OPENAI_API_KEY env var.
-    # * return: None
-    # */
     def __init__(self, openai_api_key: Optional[str] = None):
+        """Initialize the hybrid JD preprocessor. Sets up OpenAI client.
 
+        Args:
+            openai_api_key: OpenAI API key. If None, reads from OPENAI_API_KEY env var.
+        """
         api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         if api_key:
             self.client = OpenAI(api_key=api_key)
@@ -39,15 +36,18 @@ class JobDescriptionPreprocessor:
 
         logger.info("JobDescriptionPreprocessor initialized")
 
-    # /*
-    # * function name: preprocess()
-    # * Description: Run the full hybrid preprocessing pipeline on a job description.
-    # *              Traditional NLP handles text cleaning.
-    # *              OpenAI handles skills extraction and classification.
-    # * Parameter: text : str : Raw job description text.
-    # * return: dict : Processed JD data with cleaned text, skills, and features.
-    # */
     def preprocess(self, text: str) -> Dict[str, Any]:
+        """Run the full hybrid preprocessing pipeline on a job description.
+
+        Traditional NLP handles text cleaning. OpenAI handles skills extraction
+        and classification.
+
+        Args:
+            text: Raw job description text.
+
+        Returns:
+            Processed JD data with cleaned text, skills, and features.
+        """
         if not text or not text.strip():
             raise ValueError("Job description is empty")
 
@@ -70,24 +70,29 @@ class JobDescriptionPreprocessor:
             "summary": openai_extracted.get("summary"),
         }
 
-    # /*
-    # * function name: clean_text()
-    # * Description: Clean raw job description text using TextCleaner.
-    # * Parameter: text : str : Raw input text.
-    # * return: str : Cleaned text.
-    # */
     def clean_text(self, text: str) -> str:
+        """Clean raw job description text using TextCleaner.
+
+        Args:
+            text: Raw input text.
+
+        Returns:
+            Cleaned text.
+        """
         return TextCleaner.clean_text(text)
 
-    # /*
-    # * function name: openai_extract()
-    # * Description: Use OpenAI GPT-4o-mini to extract structured information
-    # *              from a job description in a single API call. Returns empty
-    # *              result and logs error if the API call fails.
-    # * Parameter: text : str : Cleaned job description text.
-    # * return: dict : Extracted data with skills, classification, key phrases.
-    # */
     def openai_extract(self, text: str) -> Dict[str, Any]:
+        """Use OpenAI GPT-4o-mini to extract structured information from a job description.
+
+        Raises on failure — callers should surface a service-unavailable
+        response to the user.
+
+        Args:
+            text: Cleaned job description text.
+
+        Returns:
+            Extracted data with skills, classification, and key phrases.
+        """
         if not self.client:
             raise RuntimeError("OpenAI client not available for JD extraction")
 
