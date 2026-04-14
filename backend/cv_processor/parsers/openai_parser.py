@@ -6,65 +6,11 @@ from openai import OpenAI
 from ..exceptions import ParsingError
 from dotenv import load_dotenv
 from services.openai_retry import retry_openai_call
+from prompts import K_CV_PARSER_SYSTEM_PROMPT, K_CV_PARSER_USER_PROMPT
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-K_SYSTEM_PROMPT = """You are a CV/resume parser. Extract structured information from the provided CV text.
-Always respond with valid JSON matching the exact schema provided.
-If a field cannot be determined from the text, use null for single values or empty arrays for lists.
-Do not invent or hallucinate information — only extract what is explicitly present in the text."""
-
-K_USER_PROMPT_TEMPLATE = """Parse the following CV/resume text and extract structured information.
-
-IMPORTANT: For the "skills" field, extract ALL skills from the ENTIRE CV — this applies to ANY industry (retail, healthcare, trades, IT, hospitality, etc.):
-- Explicit skills/qualifications sections
-- Skills demonstrated in job responsibilities (e.g., "managed inventory" → "inventory management", "operated cash register" → "cash handling", "prepared food items" → "food preparation")
-- Soft skills shown through experience (e.g., working in teams → "teamwork", handling customers → "customer service", juggling multiple tasks → "multitasking")
-- Certifications and course titles (e.g., "Food Safety Certificate" → "food safety", "First Aid" → "first aid")
-- Education field names (e.g., "Diploma in Culinary Arts" → "culinary arts", "Software Engineering" → "software engineering")
-- Tools, equipment, or systems mentioned (e.g., "POS systems", "forklift", "Excel", "SAP")
-Do not limit extraction to just the Skills section. Extract from ALL sections.
-
-Return a JSON object with this exact schema:
-{{
-    "contact": {{
-        "name": "Full name or null",
-        "email": "Email address or null",
-        "phone": "Phone number or null",
-        "location": "City/Country or null",
-        "linkedin": "LinkedIn URL or null"
-    }},
-    "skills": ["skill1", "skill2", ...],
-    "experience": [
-        {{
-            "job_title": "Title",
-            "company": "Company name",
-            "start_date": "Start date as written",
-            "end_date": "End date as written or 'Present'",
-            "description": "Brief description of role/responsibilities"
-        }}
-    ],
-    "education": [
-        {{
-            "degree": "Degree name",
-            "institution": "School/University name",
-            "year": "Graduation year or date range",
-            "field": "Field of study or null"
-        }}
-    ],
-    "certifications": ["cert1", "cert2", ...],
-    "summary": "Professional summary/objective if present, or null",
-    "education_level": "The candidate's HIGHEST education level. Must be one of: 'phd', 'masters', 'bachelors', 'college diploma', 'high school', or null if unknown"
-}}
-
-CV TEXT:
----
-{cv_text}
----
-
-Return ONLY the JSON object, nothing else."""
 
 K_MAX_CV_TEXT_LENGTH = 6000
 
@@ -92,14 +38,14 @@ class OpenAICVParser:
     # *                education, certifications, and summary.
     # */
     def parse_cv(self, raw_text: str) -> dict:
-        prompt = K_USER_PROMPT_TEMPLATE.format(cv_text=raw_text[:K_MAX_CV_TEXT_LENGTH])
+        prompt = K_CV_PARSER_USER_PROMPT.format(cv_text=raw_text[:K_MAX_CV_TEXT_LENGTH])
 
         try:
             response = retry_openai_call(
                 self.client.chat.completions.create,
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": K_SYSTEM_PROMPT},
+                    {"role": "system", "content": K_CV_PARSER_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0,
@@ -152,25 +98,6 @@ class OpenAICVParser:
 def get_parser() -> Optional[OpenAICVParser]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        logger.warning("OPENAI_API_KEY not set. CV parsing will use fallback mode.")
+        logger.warning("OPENAI_API_KEY not set. CV parsing is unavailable.")
         return None
     return OpenAICVParser(api_key=api_key)
-
-
-# /*
-# * function name: fallback_parse()
-# * Description: Returns a minimal result structure when OpenAI API is unavailable.
-# *              All parsed fields are set to None or empty lists.
-# * Parameter: raw_text : str : The raw CV text (unused but kept for interface consistency).
-# * return: dict : Fallback dictionary with _fallback flag set to True.
-# */
-def fallback_parse(raw_text: str) -> dict:
-    return {
-        "contact": {"name": None, "email": None, "phone": None, "location": None, "linkedin": None},
-        "skills": [],
-        "experience": [],
-        "education": [],
-        "certifications": [],
-        "summary": None,
-        "_fallback": True,
-    }

@@ -46,5 +46,4 @@ class CVService:
             "cv_id": hashlib.md5(text.encode()).hexdigest(),
             "raw_text": text,
             "parsed_data": result.get("parsed_data", {}),
-            "parsing_method": result.get("parsing_method")
         }

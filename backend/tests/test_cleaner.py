@@ -107,3 +107,14 @@ class TestNormalizeSkills:
     def test_mixed_case_duplicates(self):
         result = TextCleaner.normalize_skills(["React", "react.js", "REACT", "React"])
         assert result == ["react", "react.js"]
+
+    def test_skips_none_items(self):
+        result = TextCleaner.normalize_skills(["Python", None, "AWS"])
+        assert result == ["python", "aws"]
+
+    def test_skips_non_string_items(self):
+        result = TextCleaner.normalize_skills(["Python", 42, {"name": "X"}, "AWS"])
+        assert result == ["python", "aws"]
+
+    def test_none_list(self):
+        assert TextCleaner.normalize_skills(None) == []

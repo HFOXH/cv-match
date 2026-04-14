@@ -26,10 +26,16 @@ class TextCleaner:
 
     @staticmethod
     def normalize_skills(skills: list) -> list:
-        """Normalize and deduplicate a list of skill strings."""
+        """Normalize and deduplicate a list of skill strings.
+
+        Defensive against None lists, None items, and non-string items
+        (LLMs occasionally emit null entries or wrap skills in dicts).
+        """
         seen = set()
         normalized = []
-        for skill in skills:
+        for skill in skills or []:
+            if not isinstance(skill, str):
+                continue
             s = skill.strip().lower()
             if s and s not in seen:
                 seen.add(s)

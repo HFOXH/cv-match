@@ -34,7 +34,6 @@ export default function SimpleMatcher() {
   const [overallSimilarity, setOverallSimilarity] = useState<number | null>(null);
   const [sectionSimilarities, setSectionSimilarities] = useState<Record<string, number>>({});
   const [rawScores, setRawScores] = useState<Record<string, number>>({});
-  const [isFallback, setIsFallback] = useState(false);
   const [matchRating, setMatchRating] = useState("");
   const [recommendation, setRecommendation] = useState("");
   const [skillDetails, setSkillDetails] = useState<{
@@ -102,7 +101,18 @@ export default function SimpleMatcher() {
       const response = await fetch("http://localhost:8000/api/v1/match", { method: "POST", body: formData });
       if (!response.ok) {
         const err = await response.json().catch(() => null);
-        setError(err?.detail || "An error occurred while analyzing. Please try again.");
+        if (response.status === 503) {
+          setError(
+            err?.detail ||
+              "Analysis service is temporarily unavailable. Please try again in a moment."
+          );
+        } else if (response.status === 413) {
+          setError("File too large — maximum size is 5MB.");
+        } else if (response.status === 400) {
+          setError(err?.detail || "Invalid input. Please check your CV and job description.");
+        } else {
+          setError(err?.detail || "An error occurred while analyzing. Please try again.");
+        }
         setMatchScore(null);
         return;
       }
@@ -119,7 +129,6 @@ export default function SimpleMatcher() {
       setOverallSimilarity(r.overall_similarity);
       setSectionSimilarities(r.section_similarities || {});
       setRawScores(r.raw_scores || {});
-      setIsFallback(r.is_fallback || false);
       setMatchRating(r.match_rating || "");
       setRecommendation(r.recommendation || "");
       setSkillDetails(r.skill_details || null);
@@ -147,23 +156,24 @@ export default function SimpleMatcher() {
     ? circumference - (matchScore / 100) * circumference
     : circumference;
 
-  // Skills match = max of Jaccard % (from section_similarities, which is really Jaccard
-  // despite the field name) and the raw semantic cosine % (from raw_scores.skills_semantic).
-  // This way the display reflects semantic alignment when exact/fuzzy keyword matching
-  // misses synonyms — e.g., "retail customer service" vs "customer service".
+  // Take the stronger signal: the skills-match score (keyword + fuzzy + semantic
+  // reconciliation, from section_similarities.skills_match) vs the raw semantic
+  // cosine % (from raw_scores.skills_semantic). This way the display reflects
+  // semantic alignment when exact/fuzzy keyword matching misses synonyms —
+  // e.g., "retail customer service" vs "customer service".
   const skillsMatchValue = Math.round(
     Math.max(
-      sectionSimilarities.skills_semantic ?? 0,
+      sectionSimilarities.skills_match ?? sectionSimilarities.skills_semantic ?? 0,
       (rawScores.skills_semantic ?? 0) * 100,
     )
   );
 
   const bars = [
-    { label: "Overall semantic", value: overallSimilarity ?? 0, show: true },
-    { label: "Skills similarity", value: skillsMatchValue, show: !isFallback },
-    { label: "Experience relevance", value: sectionSimilarities.experience ?? 0, show: !isFallback },
-    { label: "Education alignment", value: sectionSimilarities.education ?? 0, show: !isFallback },
-  ].filter((b) => b.show);
+    { label: "Overall semantic", value: overallSimilarity ?? 0 },
+    { label: "Skills similarity", value: skillsMatchValue },
+    { label: "Experience relevance", value: sectionSimilarities.experience ?? 0 },
+    { label: "Education alignment", value: sectionSimilarities.education ?? 0 },
+  ];
 
   return (
     <Paywall>
@@ -363,11 +373,11 @@ export default function SimpleMatcher() {
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Score breakdown</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { label: "Overall", value: overallSimilarity ?? 0, sub: "semantic", show: true },
-                    { label: "Skills", value: skillsMatchValue, sub: "similarity", show: !isFallback },
-                    { label: "Experience", value: sectionSimilarities.experience ?? 0, sub: "relevance", show: !isFallback },
-                    { label: "Education", value: sectionSimilarities.education ?? 0, sub: "alignment", show: !isFallback },
-                  ].filter((m) => m.show).map((m) => (
+                    { label: "Overall", value: overallSimilarity ?? 0, sub: "semantic" },
+                    { label: "Skills", value: skillsMatchValue, sub: "similarity" },
+                    { label: "Experience", value: sectionSimilarities.experience ?? 0, sub: "relevance" },
+                    { label: "Education", value: sectionSimilarities.education ?? 0, sub: "alignment" },
+                  ].map((m) => (
                     <div key={m.label} className="bg-gray-100 dark:bg-gray-800 rounded-xl p-4">
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-1">{m.label}</p>
                       <p className="font-mono-dm text-2xl font-semibold text-gray-900 dark:text-white leading-none">{m.value}%</p>
@@ -377,13 +387,87 @@ export default function SimpleMatcher() {
                 </div>
               </div>
 
+              {/* Live calculation breakdown — shows exactly how match_score was derived */}
+              {(() => {
+                const rows = [
+                  { key: "sbert_overall",    label: "Overall semantic",      weight: 0.30 },
+                  { key: "skills_jaccard",   label: "Skills keyword match",  weight: 0.25 },
+                  { key: "experience_match", label: "Experience match",      weight: 0.25 },
+                  { key: "skills_semantic",  label: "Skills semantic match", weight: 0.10 },
+                  { key: "education_match",  label: "Education match",       weight: 0.10 },
+                ];
+                const weightedSum = rows.reduce(
+                  (acc, r) => acc + (rawScores[r.key] ?? 0) * r.weight,
+                  0,
+                );
+                return (
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+                    <div className="flex items-baseline justify-between mb-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                        How {matchScore}% was calculated
+                      </p>
+                      <a href="/scoring" className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline">
+                        Learn more →
+                      </a>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                      Each signal × its weight → contribution. The sum goes through a sigmoid curve to become the final percentage.
+                    </p>
+
+                    <div className="space-y-2.5">
+                      {rows.map((r) => {
+                        const raw = rawScores[r.key] ?? 0;
+                        const rawPct = Math.round(raw * 100);
+                        const contribution = raw * r.weight * 100;
+                        const barWidth = Math.max(0, Math.min(100, rawPct));
+                        return (
+                          <div key={r.key} className="grid grid-cols-12 items-center gap-3 text-xs">
+                            <div className="col-span-5 text-gray-700 dark:text-gray-300 font-medium truncate">
+                              {r.label}
+                            </div>
+                            <div className="col-span-4">
+                              <div className="relative h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div
+                                  className="absolute inset-y-0 left-0 bg-blue-400 dark:bg-blue-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-span-3 font-mono-dm text-right text-gray-500 dark:text-gray-400">
+                              {rawPct}% × {Math.round(r.weight * 100)}% =
+                              <span className="text-gray-800 dark:text-gray-100 font-semibold ml-1">
+                                {contribution.toFixed(1)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="border-t border-gray-200 dark:border-gray-700 mt-5 pt-4 space-y-2">
+                      <div className="flex justify-between text-xs font-mono-dm">
+                        <span className="text-gray-500 dark:text-gray-400">Raw weighted sum</span>
+                        <span className="text-gray-800 dark:text-gray-100 font-semibold">
+                          {(weightedSum * 100).toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs font-mono-dm">
+                        <span className="text-gray-500 dark:text-gray-400">Sigmoid calibration</span>
+                        <span className="text-gray-500 dark:text-gray-400">1 / (1 + exp(−8 · (x − 0.30)))</span>
+                      </div>
+                      <div className="flex justify-between items-baseline pt-1">
+                        <span className="text-sm text-gray-700 dark:text-gray-200 font-semibold">Final match score</span>
+                        <span className="font-mono-dm text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {matchScore}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Progress bars */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-                {isFallback && (
-                  <div className="mb-4 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
-                    Limited analysis — section breakdown unavailable
-                  </div>
-                )}
                 <div className="space-y-4">
                   {bars.map((b) => (
                     <div key={b.label}>
@@ -454,7 +538,7 @@ export default function SimpleMatcher() {
               </div>
 
               {/* Skills */}
-              {skillDetails && !isFallback && (
+              {skillDetails && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Skill analysis</p>

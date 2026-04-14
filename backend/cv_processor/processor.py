@@ -4,7 +4,7 @@ from typing import Dict, Any
 from .extractors.pdf_extractor import PDFExtractor
 from .extractors.docx_extractor import DOCXExtractor
 from .extractors.txt_extractor import TXTExtractor
-from .parsers.openai_parser import get_parser, fallback_parse
+from .parsers.openai_parser import get_parser
 from .exceptions import ProcessingError, ParsingError
 
 K_MIN_CV_TEXT_LENGTH = 50
@@ -53,36 +53,23 @@ class CVProcessor:
     @staticmethod
     def process_text(text: str, file_type: str = "text") -> Dict[str, Any]:
         """
-        Parse raw CV text into structured data.
+        Parse raw CV text into structured data using OpenAI.
 
-        Uses OpenAI parser if available; falls back to minimal parsing if needed.
-
-        Args:
-            text: Raw CV text.
-            file_type: Source file type (pdf, docx, txt, text).
-
-        Returns:
-            Dict with raw_text, parsed_data, parsing_method, and metadata.
+        Raises ParsingError if the OpenAI parser is unavailable or fails —
+        callers should surface a service-unavailable response to the user.
         """
         if not text.strip():
             raise ProcessingError("Empty text provided")
 
         parser = get_parser()
-        if parser:
-            try:
-                parsed_data = parser.parse_cv(text)
-                parsing_method = "openai"
-            except ParsingError:
-                parsed_data = fallback_parse(text)
-                parsing_method = "fallback"
-        else:
-            parsed_data = fallback_parse(text)
-            parsing_method = "fallback"
+        if not parser:
+            raise ParsingError("OpenAI CV parser is not configured")
+
+        parsed_data = parser.parse_cv(text)
 
         return {
             "raw_text": text,
             "parsed_data": parsed_data,
-            "parsing_method": parsing_method,
             "metadata": {
                 "file_type": file_type,
                 "text_length": len(text),
