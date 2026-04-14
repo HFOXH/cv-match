@@ -1,6 +1,6 @@
 # CVMatch
 
-> An AI-powered system that scores how well your resume matches any job description, shows exactly where you fit and where you don't, and explains how the score was calculated.
+ An AI-powered system that scores how well your resume matches any job description, shows exactly where you fit and where you don't, and explains how the score was calculated.
 
 **Authors:** Santiago Cárdenas & Amel Sunil
 **Stack:** FastAPI · Next.js · OpenAI (GPT-4o-mini + text-embedding-3-small) · Tailwind · Clerk
