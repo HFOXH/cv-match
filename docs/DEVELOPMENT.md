@@ -102,8 +102,10 @@ Key files when you're making changes:
 
 | Change | File |
 |---|---|
-| Tweak scoring weights / calibration | `backend/services/similarity_engine.py` |
+| Tweak scoring weights / calibration | `backend/config.py` (`WEIGHTS`, `SIGMOID_*`) |
+| Swap an OpenAI model | `backend/config.py` (or set the matching env var) |
 | Edit an OpenAI prompt | `backend/prompts.py` |
+| Change file size limits | `backend/config.py` (`MAX_FILE_SIZE`, `MAX_CV_TEXT_LENGTH`) |
 | Add a new route | `backend/routes/` + register in `backend/api/main.py` |
 | Change file type support | `backend/cv_processor/extractors/` |
 | Add frontend page | `frontend/app/<route>/page.tsx` |

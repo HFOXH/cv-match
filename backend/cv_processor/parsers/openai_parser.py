@@ -7,18 +7,19 @@ from ..exceptions import ParsingError
 from dotenv import load_dotenv
 from services.openai_retry import retry_openai_call
 from prompts import K_CV_PARSER_SYSTEM_PROMPT, K_CV_PARSER_USER_PROMPT
+from config import CV_PARSER_MODEL, MAX_CV_TEXT_LENGTH
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-K_MAX_CV_TEXT_LENGTH = 6000
+K_MAX_CV_TEXT_LENGTH = MAX_CV_TEXT_LENGTH
 
 
 class OpenAICVParser:
-    """Uses GPT-4o-mini to parse structured data from CV text."""
+    """Uses OpenAI chat completions to parse structured data from CV text."""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = CV_PARSER_MODEL):
         """Initialize the OpenAI CV parser with API credentials.
 
         Args:

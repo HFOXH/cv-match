@@ -98,7 +98,8 @@ export default function SimpleMatcher() {
       const formData = new FormData();
       formData.append("file", cvFile!);
       formData.append("job_description", text);
-      const response = await fetch("http://localhost:8000/api/v1/match", { method: "POST", body: formData });
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      const response = await fetch(`${BACKEND_URL}/api/v1/match`, { method: "POST", body: formData });
       if (!response.ok) {
         const err = await response.json().catch(() => null);
         if (response.status === 503) {

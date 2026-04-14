@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from .cleaner import TextCleaner
 from services.openai_retry import retry_openai_call
 from prompts import K_NORMALIZATION_SYSTEM_PROMPT, K_NORMALIZATION_USER_PROMPT
+from config import CV_NORMALIZER_MODEL
 
 load_dotenv()
 
@@ -61,7 +62,7 @@ class CVDataNormalizer:
 
             response = retry_openai_call(
                 self.client.chat.completions.create,
-                model="gpt-4o-mini",
+                model=CV_NORMALIZER_MODEL,
                 messages=[
                     {"role": "system", "content": K_NORMALIZATION_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
