@@ -1,19 +1,18 @@
 # syntax=docker/dockerfile:1
 
-# ──────────────────────────────────────────────────────────────────────────
+
 # Stage 1 — deps: install node_modules once, cache them.
-# ──────────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# ──────────────────────────────────────────────────────────────────────────
+
 # Stage 2 — builder: run `next build` with build-time public env vars.
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time, so they
 # must be passed here via --build-arg.
-# ──────────────────────────────────────────────────────────────────────────
+
 FROM node:20-alpine AS builder
 WORKDIR /app
 
@@ -28,9 +27,8 @@ ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY \
 
 RUN npm run build
 
-# ──────────────────────────────────────────────────────────────────────────
+
 # Stage 3 — runner: minimal image with just the standalone output.
-# ──────────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
