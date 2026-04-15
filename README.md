@@ -1,6 +1,6 @@
 # CVMatch
 
-> An AI-powered system that scores how well your resume matches any job description, shows exactly where you fit and where you don't, and explains how the score was calculated.
+ An AI-powered system that scores how well your resume matches any job description, shows exactly where you fit and where you don't, and explains how the score was calculated.
 
 **Authors:** Santiago Cárdenas & Amel Sunil
 **Stack:** FastAPI · Next.js · OpenAI (GPT-4o-mini + text-embedding-3-small) · Tailwind · Clerk
@@ -52,6 +52,7 @@ See [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) for running the backend (`uvi
 | Doc | What's in it |
 |---|---|
 | [User guide](./docs/USER_GUIDE.md) | How to use the app end-to-end |
+| [Architecture](./docs/ARCHITECTURE.md) | Rendered diagrams — layered architecture, request sequence, NLP pipeline |
 | [Technical guide](./docs/TECHNICAL_GUIDE.md) | How the scoring engine works under the hood — weights, calibration, boosts |
 | [API reference](./docs/API.md) | Every backend endpoint, request/response shapes, error codes |
 | [Development](./docs/DEVELOPMENT.md) | Running locally, environment, tests, common tasks |
@@ -62,24 +63,11 @@ Live explanation of the scoring logic is also available in the running app at **
 
 ## Architecture at a glance
 
-```
-┌────────────────┐         ┌──────────────────────────────────────────┐
-│   Next.js UI   │  HTTP   │              FastAPI backend              │
-│  (port 3000)   │ ──────► │                 (port 8000)               │
-└────────────────┘         │                                            │
-                           │  Upload → Extract → Parse (GPT)            │
-                           │        → Normalize (GPT)                   │
-                           │        → Embed sections (OpenAI embeddings)│
-                           │        → Score (Jaccard + cosine + boosts) │
-                           │        → Calibrate (sigmoid)               │
-                           └──────────────────┬─────────────────────────┘
-                                              │
-                                              ▼
-                                        ┌──────────┐
-                                        │  OpenAI  │
-                                        │   API    │
-                                        └──────────┘
-```
+![Layered architecture](./docs/diagrams/layered_architecture.png)
+
+For the full set of diagrams — layered architecture, per-request sequence
+(three panels), and the six-stage NLP pipeline — see
+[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
 Top-level layout:
 

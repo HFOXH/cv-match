@@ -8,9 +8,9 @@ placeholders use ``str.format`` — literal braces in the JSON schema blocks
 are doubled (``{{`` / ``}}``) so ``.format()`` leaves them intact.
 """
 
-# ---------------------------------------------------------------------------
+
 # CV parsing  (cv_processor/parsers/openai_parser.py)
-# ---------------------------------------------------------------------------
+
 
 K_CV_PARSER_SYSTEM_PROMPT = """You are a CV/resume parser. Extract structured information from the provided CV text.
 Always respond with valid JSON matching the exact schema provided.
@@ -68,9 +68,8 @@ CV TEXT:
 Return ONLY the JSON object, nothing else."""
 
 
-# ---------------------------------------------------------------------------
 # CV normalization  (nlp_preprocessing/cv_normalizer.py)
-# ---------------------------------------------------------------------------
+
 
 K_NORMALIZATION_SYSTEM_PROMPT = (
     "You are a CV data normalizer. Return only valid JSON, no markdown."
@@ -107,9 +106,9 @@ Parsed CV data:
 {cv_data}"""
 
 
-# ---------------------------------------------------------------------------
+
 # Job description extraction  (nlp_preprocessing/job_preprocessor.py)
-# ---------------------------------------------------------------------------
+
 
 K_EXTRACTION_SYSTEM_PROMPT = (
     "You are a precise job description parser. Return only valid JSON, no markdown."
@@ -143,9 +142,9 @@ Job Description:
 {jd_text}"""
 
 
-# ---------------------------------------------------------------------------
+
 # Semantic skill matching  (services/similarity_engine.py)
-# ---------------------------------------------------------------------------
+
 
 K_SEMANTIC_MATCH_PROMPT = """Given these two skill lists, find pairs where the CV skill satisfies or strongly overlaps with the JD skill.
 
